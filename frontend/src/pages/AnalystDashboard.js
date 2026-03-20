@@ -257,7 +257,39 @@ const AnalystDashboard = () => {
       )}
 
       {selected && !loading && !models.length && (
-        <Alert severity="info">No models have been trained on this dataset yet. Go to the Developer workspace to train models.</Alert>
+        <Box sx={{ py: 10, textAlign: 'center', border: '2px dashed rgba(0,0,0,0.06)', borderRadius: '20px', background: '#FAFBFC' }}>
+          <ScienceIcon sx={{ fontSize: 40, color: '#4CAF50', mb: 2 }} />
+          <Typography sx={{ color: '#2D3748', fontWeight: 700, mb: 1.5 }}>No predictive models exist for this dataset</Typography>
+          <Typography sx={{ color: '#718096', fontSize: '13px', maxWidth: 400, mx: 'auto', mb: 4 }}>
+            Before you can analyze this dataset, the AI needs to extract features and train its internal neurons across multiple algorithms.
+          </Typography>
+          <Box 
+            component="button" 
+            onClick={async () => {
+              setLoading(true); setError('');
+              try {
+                // 1. Extract features
+                await api.post(`/datasets/${selected}/extract-features`);
+                // 2. Train models
+                await api.post(`/models/train?dataset_id=${selected}`);
+                // 3. Refresh list
+                const res = await api.get(`/models/compare?dataset_id=${selected}`);
+                setModels(res.data.models || []);
+              } catch (err) {
+                setError(err.response?.data?.detail || 'Training failed. Ensure your CSV has a "label" column.');
+              }
+              setLoading(false);
+            }}
+            sx={{ 
+              px: 4, py: 1.5, borderRadius: '12px', background: '#4CAF50', color: '#fff', border: 'none',
+              fontSize: '14px', fontWeight: 800, cursor: 'pointer', transition: '0.2s',
+              boxShadow: '0 4px 12px rgba(76,175,80,0.2)',
+              '&:hover': { background: '#388E3C', transform: 'translateY(-2px)' }
+            }}
+          >
+            TRAIN ML MODELS NOW
+          </Box>
+        </Box>
       )}
 
       {!selected && (
