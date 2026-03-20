@@ -105,20 +105,66 @@ const AnalystDashboard = () => {
           </Box>
         </Box>
 
-        {/* Dataset selector */}
-        <FormControl sx={{ minWidth: 260 }} size="small">
-          <Select value={selected} onChange={handleSelect} displayEmpty sx={{ borderRadius: '10px', fontSize: '14px' }}>
-            <MenuItem value=""><em style={{ color: '#A0AEC0' }}>Select a dataset…</em></MenuItem>
-            {datasets.map(d => (
-              <MenuItem key={d.id} value={d.id} sx={{ fontSize: '14px' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <span>{d.filename}</span>
-                  <Chip label={d.status} size="small" sx={{ height: 18, fontSize: '10px', borderRadius: '4px' }} />
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {/* Dataset selector + Upload */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControl sx={{ minWidth: 260 }} size="small">
+            <Select value={selected} onChange={handleSelect} displayEmpty sx={{ borderRadius: '10px', fontSize: '14px' }}>
+              <MenuItem value=""><em style={{ color: '#A0AEC0' }}>Select a dataset…</em></MenuItem>
+              {datasets.map(d => (
+                <MenuItem key={d.id} value={d.id} sx={{ fontSize: '14px' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{d.filename}</span>
+                    <Chip label={d.status} size="small" sx={{ height: 18, fontSize: '10px', borderRadius: '4px' }} />
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <input
+            type="file"
+            id="csv-upload"
+            hidden
+            accept=".csv"
+            onChange={async (e) => {
+              const file = e.target.files[0];
+              if (!file) return;
+              setLoading(true); setError('');
+              const formData = new FormData();
+              formData.append('file', file);
+              try {
+                // 1. Upload
+                const upRes = await api.post('/datasets/upload', formData);
+                const dsId = upRes.data.dataset_id;
+                // 2. Preprocess automatically
+                await api.post(`/datasets/preprocess/${dsId}`);
+                // 3. Refresh list
+                const listRes = await api.get('/datasets/list');
+                setDatasets(listRes.data.datasets || []);
+                setSelected(dsId);
+                // 4. Trigger comparison
+                const compRes = await api.get(`/models/compare?dataset_id=${dsId}`);
+                setModels(compRes.data.models || []);
+              } catch (err) {
+                setError(err.response?.data?.detail || 'Upload/Analysis failed. Check your CSV schema.');
+              }
+              setLoading(false);
+            }}
+          />
+          <Tooltip title="Upload any CSV repository export for instant multi-model analysis">
+            <Box 
+              component="label" 
+              htmlFor="csv-upload" 
+              sx={{ 
+                px: 2, py: 1, borderRadius: '10px', background: '#2D3748', color: '#fff', 
+                fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: '0.2s',
+                '&:hover': { background: '#1A202C' }, display: 'flex', alignItems: 'center', gap: 1
+              }}
+            >
+              UPLOAD CSV
+            </Box>
+          </Tooltip>
+        </Box>
       </Box>
 
       {loading && <Box sx={{ py: 6, textAlign: 'center' }}><CircularProgress size={28} sx={{ color: '#E86A33' }} /></Box>}
