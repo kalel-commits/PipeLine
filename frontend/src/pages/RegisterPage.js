@@ -71,7 +71,7 @@ const RegisterPage = () => {
             </Button>
           </Box>
 
-          <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.08)' }} />
+          <Divider sx={{ my: 3, borderColor: 'rgba(0,0,0,0.08)' }} />
           <Typography variant="body2" color="text.secondary" textAlign="center">
             Already have an account?{' '}
             <Link to="/login" style={{ color: '#4a9eff', textDecoration: 'none', fontWeight: 600 }}>Sign in</Link>

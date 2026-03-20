@@ -232,9 +232,38 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
     pred = model.predict(X_scaled)[0]
     prob = model.predict_proba(X_scaled)[0][1] if hasattr(model, "predict_proba") else None
 
+    # Calculate local top risk factors
+    top_risk_factors = []
+    if feature_names and ml_model.metrics:
+        global_importances = {item["feature"]: item["importance"] for item in ml_model.metrics.get("feature_importances", [])}
+        if global_importances:
+            # We use global importance * normalized feature value as a rough heuristic for local impact
+            local_impacts = []
+            for i, fname in enumerate(feature_names):
+                val = X_scaled[0][i]
+                imp = global_importances.get(fname, 0)
+                # Only care if it pushed the probability of failure up (positive value in scaled space * importance)
+                impact = max(0, val * imp)
+                local_impacts.append({"feature": fname, "impact": float(impact), "value": values[i]})
+            
+            # Sort by impact and take top 3
+            local_impacts.sort(key=lambda x: x["impact"], reverse=True)
+            
+            # Normalize to percentages
+            total_impact = sum(x["impact"] for x in local_impacts)
+            if total_impact > 0:
+                for item in local_impacts[:3]:
+                    if item["impact"] > 0:
+                        top_risk_factors.append({
+                            "feature": item["feature"],
+                            "contribution": round((item["impact"] / total_impact) * 100, 1),
+                            "value": item["value"]
+                        })
+
     return {
         "prediction": "Success" if int(pred) == 1 else "Failure",
         "probability": float(prob) if prob is not None else None,
+        "top_risk_factors": top_risk_factors
     }
 
 def compare_models(db: Session, dataset_id: int) -> list:

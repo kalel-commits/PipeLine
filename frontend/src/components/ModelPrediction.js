@@ -68,7 +68,7 @@ const ModelPrediction = ({ modelId, featureNames }) => {
             Build {result.prediction}
           </Typography>
           {result.probability != null && (
-            <Box sx={{ mt: 1.5, maxWidth: 260, mx: 'auto' }}>
+            <Box sx={{ mt: 1.5, maxWidth: 300, mx: 'auto' }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
                 Confidence: <strong style={{ color: '#f9fafb' }}>{(result.probability * 100).toFixed(1)}%</strong>
               </Typography>
@@ -80,6 +80,41 @@ const ModelPrediction = ({ modelId, featureNames }) => {
                   '& .MuiLinearProgress-bar': { background: isSuccess ? '#10b981' : '#ef4444' }
                 }}
               />
+            </Box>
+          )}
+
+          {/* New Top Risk Factors Explainability UI */}
+          {!isSuccess && result.top_risk_factors && result.top_risk_factors.length > 0 && (
+            <Box sx={{ 
+              mt: 4, pt: 3, borderTop: '1px solid rgba(239,68,68,0.15)', 
+              textAlign: 'left', maxWidth: 400, mx: 'auto' 
+            }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>
+                ⚠️ Top Risk Factors
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {result.top_risk_factors.map((factor, idx) => (
+                  <Box key={idx} sx={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'rgba(255,255,255,0.4)', px: 2, py: 1.5, borderRadius: 2
+                  }}>
+                    <Box>
+                      <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#1f2937' }}>
+                        {factor.feature.replace(/_/g, ' ')}
+                      </Typography>
+                      <Typography sx={{ fontSize: '12px', color: '#6b7280' }}>
+                        Value: {factor.value > 1000 ? (factor.value / 1000).toFixed(1) + 'k' : factor.value}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography sx={{ fontWeight: 800, color: '#ef4444', fontSize: '15px' }}>
+                        +{factor.contribution}%
+                      </Typography>
+                      <Typography sx={{ fontSize: '11px', color: '#9ca3af' }}>impact</Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
             </Box>
           )}
         </Box>

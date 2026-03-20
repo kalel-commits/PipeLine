@@ -3,40 +3,40 @@
 /* ─── Strict Design Tokens ─────────────────────────── */
 :root {
   /* Backgrounds */
-  --bg-app: #0B0F19;
-  --bg-surface: #111827;
-  --bg-card: #151C2E;
-  --bg-hover: #1B2438;
+  --bg-app: #FCF8E8;
+  --bg-surface: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F7FAFC;
 
   /* Borders */
-  --border: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.12);
-  --border-active: rgba(99, 102, 241, 0.5);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.16);
+  --border-active: rgba(232, 106, 51, 0.5);
 
   /* Primary */
-  --primary: #6366F1;
-  --primary-light: #818CF8;
-  --primary-gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-  --primary-dim: rgba(99, 102, 241, 0.12);
+  --primary: #E86A33;
+  --primary-light: #F08A5D;
+  --primary-gradient: linear-gradient(135deg, #E86A33 0%, #D65A31 100%);
+  --primary-dim: rgba(232, 106, 51, 0.12);
 
   /* States */
-  --success: #10B981;
-  --success-dim: rgba(16, 185, 129, 0.12);
+  --success: #4CAF50;
+  --success-dim: rgba(76, 175, 80, 0.12);
   --warning: #F59E0B;
   --warning-dim: rgba(245, 158, 11, 0.12);
   --error: #EF4444;
   --error-dim: rgba(239, 68, 68, 0.12);
 
   /* Text */
-  --text-primary: #F9FAFB;
-  --text-secondary: #9CA3AF;
-  --text-muted: #4B5563;
+  --text-primary: #2D3748;
+  --text-secondary: #718096;
+  --text-muted: #A0AEC0;
 
   /* Geometry */
   --radius: 14px;
   --radius-sm: 8px;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.35);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
   --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Spacing (8px grid) */
@@ -296,11 +296,21 @@ body {
 }
 
 /* ─── Responsive ─────────────────────────────────────── */
-@media (max-width: 768px) {
+@media (max-width: 850px) {
   .page-container {
-    padding: var(--s3) var(--s2);
+    padding: var(--s2) var(--s1);
+  }
+  
+  .ui-card {
+    padding: var(--s2);
   }
 
+  body {
+    font-size: 13px; /* Slightly smaller text for narrow VS Code panels */
+  }
+}
+
+@media (max-width: 600px) {
   .landing-footer {
     flex-direction: column;
     gap: var(--s1);

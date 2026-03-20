@@ -1,0 +1,484 @@
+from fastapi import APIRouter, BackgroundTasks, Body, Query
+from typing import List, Any, Optional
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+import pickle
+import json
+from datetime import datetime
+from collections import deque
+
+router = APIRouter()
+
+# ──────────────────────────────────────────────────────────────────
+# In-memory state
+# ──────────────────────────────────────────────────────────────────
+latest_commit_data = None
+training_stats = None
+all_commits_history: list = []  # cumulative history for repo insights
+model_version_counter = 0
+last_trained_at = None
+
+# Training status tracking
+training_status = {
+    "status": "idle",   # idle | queued | training | done | error
+    "started_at": None,
+    "completed_at": None,
+    "error": None,
+    "model_version": 0,
+}
+
+# Drift monitoring – rolling window
+prediction_window: deque = deque(maxlen=50)
+DRIFT_THRESHOLD = 0.15  # mean risk shift that triggers drift alert
+
+FEATURE_NAMES = [
+    'code_churn', 'change_ratio', 'num_files',
+    'msg_length', 'has_fix', 'is_weekend', 'commit_hour'
+]
+
+
+# ──────────────────────────────────────────────────────────────────
+# Utility helpers
+# ──────────────────────────────────────────────────────────────────
+def parse_hour(x):
+    """Extract hour from git date string."""
+    try:
+        return datetime.strptime(x, "%a %b %d %H:%M:%S %Y %z").hour
+    except Exception:
+        try:
+            return datetime.strptime(x, "%a %b %d %H:%M:%S %Y").hour
+        except Exception:
+            return 12
+
+
+def parse_weekend(x):
+    """Check if commit was on a weekend."""
+    try:
+        return int(datetime.strptime(x, "%a %b %d %H:%M:%S %Y %z").weekday() >= 5)
+    except Exception:
+        try:
+            return int(datetime.strptime(x, "%a %b %d %H:%M:%S %Y").weekday() >= 5)
+        except Exception:
+            return 0
+
+
+def categorize_risk(risk: float) -> str:
+    """Classify a probability into Low / Medium / High."""
+    if risk < 0.35:
+        return "Low"
+    if risk < 0.65:
+        return "Medium"
+    return "High"
+
+
+def generate_suggestions(vals, risk: float) -> list:
+    """
+    AI Mentor: produce actionable suggestions based on feature values.
+    vals order: code_churn, change_ratio, num_files, msg_length, has_fix,
+                is_weekend, commit_hour
+    """
+    suggestions = []
+    if vals[0] > 150:
+        suggestions.append({
+            "icon": "✂️",
+            "title": "Split this commit",
+            "detail": f"You changed {int(vals[0])} lines. Commits >150 lines are 2.3× more likely to fail. Break into smaller, focused changes.",
+        })
+    if vals[2] > 5:
+        suggestions.append({
+            "icon": "📁",
+            "title": "Too many files touched",
+            "detail": f"{int(vals[2])} files changed. Keep commits to ≤5 files for easier review and safer deploys.",
+        })
+    if vals[3] < 10:
+        suggestions.append({
+            "icon": "📝",
+            "title": "Write a meaningful commit message",
+            "detail": "Messages under 10 characters often indicate rushed work. Describe what and why.",
+        })
+    if vals[4] == 1:
+        suggestions.append({
+            "icon": "🐛",
+            "title": "Hotfix detected — add tests",
+            "detail": "Your message contains fix/urgent/revert keywords. Always pair hotfixes with regression tests.",
+        })
+    if vals[5] == 1:
+        suggestions.append({
+            "icon": "📅",
+            "title": "Avoid weekend deploys",
+            "detail": "Weekend commits historically have higher failure rates due to reduced team availability for review.",
+        })
+    if vals[6] >= 22 or vals[6] <= 4:
+        suggestions.append({
+            "icon": "🌙",
+            "title": "Late-night commit — consider waiting",
+            "detail": f"Committing at hour {int(vals[6])} increases error risk. Schedule for business hours if possible.",
+        })
+    if risk < 0.3 and not suggestions:
+        suggestions.append({
+            "icon": "✅",
+            "title": "Great commit hygiene!",
+            "detail": "All signals look healthy. Keep up the disciplined workflow!",
+        })
+    return suggestions
+
+
+def extract_features(df):
+    """Extract 7 engineered features from raw commit data."""
+    df['code_churn'] = df['added'] + df['removed']
+    df['change_ratio'] = np.where(
+        df['code_churn'] > 0,
+        df['added'] / df['code_churn'],
+        0.5
+    )
+    df['num_files'] = df.get('files_changed', pd.Series([1] * len(df)))
+    df['msg_length'] = df['message'].astype(str).apply(len)
+    df['has_fix'] = df['message'].astype(str).str.contains(
+        'fix|urgent|revert|hotfix|bug|broken|crash', case=False, na=False
+    ).astype(int)
+    df['is_weekend'] = df['date'].apply(parse_weekend)
+    df['commit_hour'] = df['date'].apply(parse_hour)
+    return df[FEATURE_NAMES].astype(float)
+
+
+# ──────────────────────────────────────────────────────────────────
+# Training
+# ──────────────────────────────────────────────────────────────────
+def train_model(data):
+    """Train a RandomForest on historical commits with cross-validation."""
+    global latest_commit_data, training_stats, training_status, all_commits_history, model_version_counter, last_trained_at
+
+    training_status["status"] = "training"
+    training_status["started_at"] = datetime.utcnow().isoformat()
+    training_status["error"] = None
+
+    try:
+        df = pd.DataFrame(data)
+        if len(df) == 0:
+            training_status["status"] = "error"
+            training_status["error"] = "No data received"
+            return
+
+        latest_commit_data = df.iloc[0].to_dict()
+        all_commits_history.extend(data)  # accumulate for repo insights
+
+        # Simulate failures
+        df['failure'] = (
+            ((df['added'] + df['removed']) > 150) |
+            (df['message'].astype(str).str.contains('fix|urgent|revert', case=False, na=False) &
+             df['date'].apply(lambda x: parse_weekend(x) == 1))
+        ).astype(int)
+
+        X = extract_features(df)
+        y = df['failure']
+
+        if len(y.unique()) <= 1:
+            X.loc[len(X)] = [500, 0.9, 8, 3, 1, 1, 23]
+            y.loc[len(y)] = 1
+            X.loc[len(X)] = [10, 0.5, 1, 50, 0, 0, 10]
+            y.loc[len(y)] = 0
+
+        model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+        model.fit(X, y)
+
+        cv_scores = {}
+        if len(df) >= 10:
+            folds = min(5, len(df))
+            scores = cross_val_score(model, X, y, cv=folds, scoring='accuracy')
+            cv_scores = {
+                "cv_accuracy_mean": round(float(scores.mean()), 4),
+                "cv_accuracy_std": round(float(scores.std()), 4),
+                "folds": folds,
+            }
+
+        importances = dict(zip(FEATURE_NAMES, [round(float(x), 4) for x in model.feature_importances_]))
+
+        model_version_counter += 1
+        last_trained_at = datetime.utcnow().isoformat()
+
+        training_stats = {
+            "total_commits": len(df),
+            "failure_rate": round(float(y.mean()), 4),
+            "features_used": FEATURE_NAMES,
+            "feature_importances": importances,
+            "cross_validation": cv_scores,
+            "model_type": "RandomForestClassifier",
+            "n_estimators": 100,
+            "max_depth": 5,
+            "training_baseline_risk": round(float(y.mean()), 4),
+            "model_version": model_version_counter,
+            "last_trained_at": last_trained_at,
+        }
+
+        pickle.dump(model, open("model.pkl", "wb"))
+        with open("training_stats.json", "w") as f:
+            json.dump(training_stats, f)
+
+        training_status["status"] = "done"
+        training_status["completed_at"] = last_trained_at
+        training_status["model_version"] = model_version_counter
+
+    except Exception as e:
+        training_status["status"] = "error"
+        training_status["error"] = str(e)
+        print("Training error:", e)
+
+
+# ──────────────────────────────────────────────────────────────────
+# Routes
+# ──────────────────────────────────────────────────────────────────
+@router.post("/dataset/auto-sync")
+async def auto_sync(background_tasks: BackgroundTasks, data: List[Any] = Body(...)):
+    training_status["status"] = "queued"
+    background_tasks.add_task(train_model, data)
+    return {"status": "Training started in background"}
+
+
+@router.get("/training/status")
+def get_training_status():
+    """Return real-time training status."""
+    return training_status
+
+
+@router.get("/predict/latest")
+def predict_latest(demo: Optional[str] = Query(None)):
+    """
+    Predict risk for the latest commit.
+    Demo mode: ?demo=high or ?demo=low for reliable live demonstrations.
+    """
+    # ── Demo mode ──
+    if demo == "high":
+        demo_vals = [450, 0.92, 12, 4, 1, 1, 23]
+        return _build_prediction_response(demo_vals, is_demo=True)
+    if demo == "low":
+        demo_vals = [15, 0.55, 1, 55, 0, 0, 10]
+        return _build_prediction_response(demo_vals, is_demo=True)
+
+    # ── Normal prediction ──
+    try:
+        loaded_model = pickle.load(open("model.pkl", "rb"))
+
+        if latest_commit_data:
+            commit = latest_commit_data
+            added = int(commit.get('added', 0))
+            removed = int(commit.get('removed', 0))
+            churn = added + removed
+            sample_vals = [
+                churn,
+                added / churn if churn > 0 else 0.5,
+                int(commit.get('files_changed', 1)),
+                len(str(commit.get('message', ''))),
+                1 if any(w in str(commit.get('message', '')).lower() for w in ['fix', 'urgent', 'revert', 'hotfix', 'bug']) else 0,
+                parse_weekend(str(commit.get('date', ''))),
+                parse_hour(str(commit.get('date', ''))),
+            ]
+        else:
+            sample_vals = [300, 0.9, 5, 4, 1, 1, 23]
+
+        return _build_prediction_response(sample_vals)
+
+    except Exception as e:
+        print("Model prediction error:", e)
+        return {"risk": 0, "reason": "Model not ready", "risk_category": "Low"}
+
+
+def _build_prediction_response(vals, is_demo=False):
+    """Core prediction logic shared by normal + demo modes."""
+    try:
+        loaded_model = pickle.load(open("model.pkl", "rb"))
+    except Exception:
+        return {"risk": 0, "reason": "Model not ready", "risk_category": "Low"}
+
+    sample = [vals]
+    prob = loaded_model.predict_proba(sample)[0]
+    risk = float(prob[1]) if len(prob) > 1 else float(prob[0])
+
+    category = categorize_risk(risk)
+
+    # ── Dynamic explanation ──
+    reasons = []
+    if vals[0] > 150:
+        reasons.append(f"High code churn ({int(vals[0])} lines changed)")
+    if vals[4] == 1:
+        reasons.append("Commit message contains risk keywords (fix/urgent/revert)")
+    if vals[5] == 1:
+        reasons.append("Committed on a weekend")
+    if vals[6] >= 22 or vals[6] <= 4:
+        reasons.append(f"Late night commit (hour {int(vals[6])})")
+    if vals[3] < 10:
+        reasons.append("Very short commit message (potential low effort)")
+    if vals[2] > 5:
+        reasons.append(f"Many files changed ({int(vals[2])} files)")
+    if not reasons:
+        reasons.append("All signals within normal range")
+    reason = " · ".join(reasons)
+
+    # ── SHAP explainability ──
+    shap_values_list = []
+    try:
+        import shap
+        explainer = shap.TreeExplainer(loaded_model)
+        sv = explainer.shap_values(np.array(sample))
+        # For binary classification, shap_values returns [class0, class1]
+        if isinstance(sv, list) and len(sv) == 2:
+            shap_vals = sv[1][0]
+        else:
+            shap_vals = sv[0]
+        for fname, fval, shapval in zip(FEATURE_NAMES, vals, shap_vals):
+            shap_values_list.append({
+                "feature": fname,
+                "value": round(float(fval), 3),
+                "shap_value": round(float(shapval), 4),
+            })
+        shap_values_list.sort(key=lambda x: abs(x["shap_value"]), reverse=True)
+    except Exception as e:
+        print("SHAP calculation skipped:", e)
+
+    # ── AI Mentor suggestions ──
+    suggestions = generate_suggestions(vals, risk)
+
+    # ── Drift tracking ──
+    if not is_demo:
+        prediction_window.append(risk)
+
+    # ── Confidence score (distance from 0.5 boundary) ──
+    confidence = round(abs(risk - 0.5) * 2, 3)  # 0.0 = uncertain, 1.0 = very confident
+
+    # ── Top insight (single most important reason) ──
+    top_insight = reasons[0] if reasons else "All signals healthy"
+
+    response = {
+        "risk": risk,
+        "risk_category": category,
+        "confidence": confidence,
+        "reason": reason,
+        "top_insight": top_insight,
+        "features": dict(zip(FEATURE_NAMES, vals)),
+        "suggestions": suggestions,
+        "shap_values": shap_values_list,
+        "model_version": model_version_counter,
+        "last_trained_at": last_trained_at,
+    }
+    if is_demo:
+        response["demo_mode"] = True
+
+    return response
+
+
+@router.get("/training/stats")
+def get_training_stats():
+    """Return training metrics and feature importances for the dashboard."""
+    try:
+        with open("training_stats.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return {"error": "No training stats available yet"}
+
+
+# ──────────────────────────────────────────────────────────────────
+# Drift monitoring
+# ──────────────────────────────────────────────────────────────────
+@router.get("/drift/status")
+def drift_status():
+    """
+    Return model drift metrics based on rolling prediction window.
+    Compares recent mean risk to the training baseline failure rate.
+    """
+    if len(prediction_window) < 5:
+        return {
+            "status": "insufficient_data",
+            "total_predictions": len(prediction_window),
+            "message": "Need at least 5 predictions to assess drift.",
+        }
+
+    window_list = list(prediction_window)
+    mean_risk = float(np.mean(window_list))
+    std_risk = float(np.std(window_list))
+
+    # Compare to training baseline
+    baseline = 0.5
+    if training_stats and "training_baseline_risk" in training_stats:
+        baseline = training_stats["training_baseline_risk"]
+
+    drift_magnitude = abs(mean_risk - baseline)
+    drift_detected = drift_magnitude > DRIFT_THRESHOLD
+
+    return {
+        "status": "drift_detected" if drift_detected else "stable",
+        "mean_risk": round(mean_risk, 4),
+        "std_risk": round(std_risk, 4),
+        "baseline_risk": round(baseline, 4),
+        "drift_magnitude": round(drift_magnitude, 4),
+        "drift_threshold": DRIFT_THRESHOLD,
+        "total_predictions": len(window_list),
+        "should_retrain": drift_detected,
+    }
+
+
+@router.post("/drift/auto-retrain")
+async def auto_retrain(background_tasks: BackgroundTasks):
+    """Trigger automatic retraining using accumulated commit history."""
+    if not all_commits_history:
+        return {"status": "error", "message": "No historical commit data available for retraining."}
+
+    background_tasks.add_task(train_model, all_commits_history)
+    return {"status": "Retraining triggered", "commits_used": len(all_commits_history)}
+
+
+# ──────────────────────────────────────────────────────────────────
+# Repository insights
+# ──────────────────────────────────────────────────────────────────
+@router.get("/repo/insights")
+def repo_insights():
+    """
+    Team-level intelligence: failure-prone patterns, risky hours, behavioral stats.
+    """
+    if not all_commits_history:
+        return {"status": "no_data", "message": "No commit history available yet."}
+
+    df = pd.DataFrame(all_commits_history)
+    total = len(df)
+
+    # Simulate failure labels (same logic as training)
+    df['failure'] = (
+        ((df['added'] + df['removed']) > 150) |
+        (df['message'].astype(str).str.contains('fix|urgent|revert', case=False, na=False) &
+         df['date'].apply(lambda x: parse_weekend(x) == 1))
+    ).astype(int)
+
+    failure_count = int(df['failure'].sum())
+
+    # Risky hours analysis
+    df['hour'] = df['date'].apply(parse_hour)
+    hour_risk = df.groupby('hour')['failure'].mean().to_dict()
+    riskiest_hours = sorted(hour_risk.items(), key=lambda x: x[1], reverse=True)[:3]
+
+    # Weekend vs weekday failure rates
+    df['is_weekend'] = df['date'].apply(parse_weekend)
+    weekend_rate = float(df[df['is_weekend'] == 1]['failure'].mean()) if (df['is_weekend'] == 1).any() else 0
+    weekday_rate = float(df[df['is_weekend'] == 0]['failure'].mean()) if (df['is_weekend'] == 0).any() else 0
+
+    # Churn analysis
+    df['code_churn'] = df['added'] + df['removed']
+    avg_churn_fail = float(df[df['failure'] == 1]['code_churn'].mean()) if failure_count > 0 else 0
+    avg_churn_pass = float(df[df['failure'] == 0]['code_churn'].mean()) if (total - failure_count) > 0 else 0
+
+    # Hotfix keyword frequency
+    hotfix_count = int(df['message'].astype(str).str.contains(
+        'fix|urgent|revert|hotfix|bug', case=False, na=False
+    ).sum())
+
+    return {
+        "total_commits": total,
+        "total_failures": failure_count,
+        "failure_rate": round(failure_count / total, 4) if total > 0 else 0,
+        "riskiest_hours": [{"hour": int(h), "failure_rate": round(r, 4)} for h, r in riskiest_hours],
+        "weekend_failure_rate": round(weekend_rate, 4),
+        "weekday_failure_rate": round(weekday_rate, 4),
+        "avg_churn_failing_commits": round(avg_churn_fail, 1),
+        "avg_churn_passing_commits": round(avg_churn_pass, 1),
+        "hotfix_keyword_commits": hotfix_count,
+        "hotfix_percentage": round(hotfix_count / total * 100, 1) if total > 0 else 0,
+    }

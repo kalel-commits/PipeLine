@@ -14,11 +14,32 @@ def extract_commit_features(df: pd.DataFrame) -> pd.DataFrame:
     lines_added   = df.groupby('developer_id')['lines_added'].sum().rename('lines_added')
     lines_removed = df.groupby('developer_id')['lines_removed'].sum().rename('lines_removed')
     commit_size   = (lines_added + lines_removed).rename('commit_size')
+    
+    # Derived metric: change ratio (added / total) - safely handle 0 size
+    change_ratio = (lines_added / commit_size).fillna(0).rename('change_ratio')
+
     activity_freq = df.groupby('developer_id')['commit_timestamp'].count().rename('activity_freq')
-    return pd.concat(
-        [commit_counts, files_changed, lines_added, lines_removed, commit_size, activity_freq],
-        axis=1
-    ).reset_index()
+    
+    features = [commit_counts, files_changed, lines_added, lines_removed, commit_size, change_ratio, activity_freq]
+    
+    # Add NLP logic dynamically if column exists
+    if 'commit_message' in df.columns:
+        df['is_fix'] = df['commit_message'].astype(str).str.contains('fix|bug|revert|hotfix|patch', case=False, na=False).astype(int)
+        fix_commits = df.groupby('developer_id')['is_fix'].sum().rename('fix_commits')
+        features.append(fix_commits)
+        
+    # Add Behavioral tracking dynamically
+    if 'commit_timestamp' in df.columns:
+        dt_col = pd.to_datetime(df['commit_timestamp'], errors='coerce')
+        df['is_weekend'] = (dt_col.dt.dayofweek >= 5).astype(int)
+        weekend_commits = df.groupby('developer_id')['is_weekend'].sum().rename('weekend_commits')
+        
+        df['is_off_hours'] = ((dt_col.dt.hour < 8) | (dt_col.dt.hour >= 18)).astype(int)
+        off_hours_commits = df.groupby('developer_id')['is_off_hours'].sum().rename('off_hours_commits')
+        
+        features.extend([weekend_commits, off_hours_commits])
+
+    return pd.concat(features, axis=1).reset_index()
 
 
 def extract_pipeline_features(df: pd.DataFrame) -> pd.DataFrame:

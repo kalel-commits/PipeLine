@@ -65,7 +65,7 @@ const ModelComparison = ({ datasetId, onModelActivated, currentModel }) => {
       y: {
         min: 0, max: 1,
         ticks: { color: '#6b7280', callback: v => `${(v * 100).toFixed(0)}%`, font: { size: 11 } },
-        grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'transparent' }
+        grid: { color: 'rgba(0,0,0,0.04)' }, border: { color: 'transparent' }
       },
       x: { ticks: { color: '#6b7280', font: { size: 11 } }, grid: { display: false }, border: { color: 'transparent' } }
     }

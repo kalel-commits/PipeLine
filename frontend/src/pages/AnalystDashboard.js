@@ -12,18 +12,18 @@ import ScienceIcon from '@mui/icons-material/Science';
 
 const METRICS = ['accuracy', 'precision', 'recall', 'f1'];
 const M_LABELS = ['Accuracy', 'Precision', 'Recall', 'F1'];
-const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#3B82F6'];
+const COLORS = ['#E86A33', '#4CAF50', '#F59E0B', '#3B82F6'];
 const algoColor = { LogisticRegression: 'primary', RandomForest: 'success', DecisionTree: 'warning' };
 
 const SectionCard = ({ title, children, action }) => (
   <Box sx={{
-    background: '#151C2E', border: '1px solid rgba(255,255,255,0.06)',
+    background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
     borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', mb: 2.5,
     overflow: 'hidden', transition: 'border-color 200ms',
-    '&:hover': { borderColor: 'rgba(255,255,255,0.1)' },
+    '&:hover': { borderColor: 'rgba(0,0,0,0.1)' },
   }}>
-    <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#F9FAFB', letterSpacing: '-0.01em' }}>{title}</Typography>
+    <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#2D3748', letterSpacing: '-0.01em' }}>{title}</Typography>
       {action}
     </Box>
     <Box sx={{ p: 3 }}>{children}</Box>
@@ -72,20 +72,20 @@ const AnalystDashboard = () => {
   const chartOptions = {
     responsive: true, maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { color: '#9CA3AF', font: { size: 12, family: 'Inter' }, boxWidth: 10, padding: 18 } },
-      tooltip: { backgroundColor: '#1B2438', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1, titleFont: { size: 12 }, bodyFont: { size: 12 }, padding: 10, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}% CV Mean` } },
+      legend: { position: 'top', labels: { color: '#718096', font: { size: 12, family: 'Inter' }, boxWidth: 10, padding: 18 } },
+      tooltip: { backgroundColor: '#F7FAFC', borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, titleFont: { size: 12 }, bodyFont: { size: 12 }, padding: 10, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}% CV Mean` } },
     },
     scales: {
       y: {
         min: 0, max: 100,
         ticks: { color: '#6B7280', font: { size: 11 }, callback: v => `${v}%`, stepSize: 25 },
-        grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+        grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
         border: { color: 'transparent' },
       },
       x: {
         ticks: { color: '#6B7280', font: { size: 12 } },
         grid: { display: false },
-        border: { color: 'rgba(255,255,255,0.06)' },
+        border: { color: 'rgba(0,0,0,0.06)' },
       }
     },
   };
@@ -97,18 +97,18 @@ const AnalystDashboard = () => {
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box sx={{ width: 40, height: 40, borderRadius: '11px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ScienceIcon sx={{ fontSize: 22, color: '#10B981' }} />
+            <ScienceIcon sx={{ fontSize: 22, color: '#4CAF50' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', color: '#F9FAFB', lineHeight: 1.2 }}>Analytics Lab</Typography>
-            <Typography sx={{ fontSize: '14px', color: '#9CA3AF', mt: 0.5 }}>Hyperparameter tuned models with 5-fold cross-validation comparisons</Typography>
+            <Typography sx={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', color: '#2D3748', lineHeight: 1.2 }}>Analytics Lab</Typography>
+            <Typography sx={{ fontSize: '14px', color: '#718096', mt: 0.5 }}>Hyperparameter tuned models with 5-fold cross-validation comparisons</Typography>
           </Box>
         </Box>
 
         {/* Dataset selector */}
         <FormControl sx={{ minWidth: 260 }} size="small">
           <Select value={selected} onChange={handleSelect} displayEmpty sx={{ borderRadius: '10px', fontSize: '14px' }}>
-            <MenuItem value=""><em style={{ color: '#4B5563' }}>Select a dataset…</em></MenuItem>
+            <MenuItem value=""><em style={{ color: '#A0AEC0' }}>Select a dataset…</em></MenuItem>
             {datasets.map(d => (
               <MenuItem key={d.id} value={d.id} sx={{ fontSize: '14px' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -121,20 +121,20 @@ const AnalystDashboard = () => {
         </FormControl>
       </Box>
 
-      {loading && <Box sx={{ py: 6, textAlign: 'center' }}><CircularProgress size={28} sx={{ color: '#6366F1' }} /></Box>}
+      {loading && <Box sx={{ py: 6, textAlign: 'center' }}><CircularProgress size={28} sx={{ color: '#E86A33' }} /></Box>}
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {/* Best model banner */}
       {bestModel && (
         <Box sx={{
           display: 'flex', alignItems: 'center', gap: 3, px: 3, py: 2, mb: 2.5,
-          background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: '12px',
+          background: 'rgba(232,106,51,0.07)', border: '1px solid rgba(232,106,51,0.18)', borderRadius: '12px',
           flexWrap: 'wrap',
         }}>
-          <TrendingUpIcon sx={{ color: '#6366F1', fontSize: 22 }} />
+          <TrendingUpIcon sx={{ color: '#E86A33', fontSize: 22 }} />
           <Box>
             <Typography sx={{ fontSize: '13px', color: '#818CF8', fontWeight: 600, mb: 0.25 }}>Top Performer (Highest CV F1)</Typography>
-            <Typography sx={{ fontSize: '15px', fontWeight: 700, color: '#F9FAFB' }}>
+            <Typography sx={{ fontSize: '15px', fontWeight: 700, color: '#2D3748' }}>
               {bestModel.algorithm.replace(/([A-Z])/g, ' $1').trim()}
             </Typography>
           </Box>
@@ -175,14 +175,14 @@ const AnalystDashboard = () => {
                   {models.map(m => {
                     const isBest = bestModel && m.model_id === bestModel.model_id;
                     return (
-                      <TableRow key={m.model_id} sx={{ background: isBest ? 'rgba(99,102,241,0.04) !important' : undefined }}>
+                      <TableRow key={m.model_id} sx={{ background: isBest ? 'rgba(232,106,51,0.04) !important' : undefined }}>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                             <Chip label={m.algorithm.replace(/([A-Z])/g, ' $1').trim()} color={algoColor[m.algorithm] || 'default'} size="small" />
-                            {isBest && <Chip label="Best" size="small" sx={{ height: 18, fontSize: '10px', background: 'rgba(99,102,241,0.15)', color: '#818CF8', borderRadius: '4px' }} />}
+                            {isBest && <Chip label="Best" size="small" sx={{ height: 18, fontSize: '10px', background: 'rgba(232,106,51,0.15)', color: '#818CF8', borderRadius: '4px' }} />}
                             {m.metrics.best_params && (
                               <Tooltip title={`GridSearchCV Best Params: ${JSON.stringify(m.metrics.best_params)}`}>
-                                <Chip label="Tuned" size="small" sx={{ height: 18, fontSize: '10px', background: 'rgba(16,185,129,0.15)', color: '#10B981', borderRadius: '4px' }} />
+                                <Chip label="Tuned" size="small" sx={{ height: 18, fontSize: '10px', background: 'rgba(16,185,129,0.15)', color: '#4CAF50', borderRadius: '4px' }} />
                               </Tooltip>
                             )}
                           </Box>
@@ -190,7 +190,7 @@ const AnalystDashboard = () => {
                         {METRICS.map((k, i) => (
                           <TableCell key={k} align="right">
                             <Box>
-                              <Typography sx={{ fontSize: '14px', fontWeight: k === 'accuracy' || k === 'f1' ? 700 : 400, color: k === 'accuracy' || k === 'f1' ? COLORS[i] : '#F9FAFB', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                              <Typography sx={{ fontSize: '14px', fontWeight: k === 'accuracy' || k === 'f1' ? 700 : 400, color: k === 'accuracy' || k === 'f1' ? COLORS[i] : '#2D3748', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                                 {(getCvMean(m, k) * 100).toFixed(2)}%
                               </Typography>
                               <Typography sx={{ fontSize: '11px', color: '#6B7280', fontVariantNumeric: 'tabular-nums', mt: 0.5 }}>

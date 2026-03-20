@@ -1,0 +1,8 @@
+{
+    "short_name": "CI/CD Predictor",
+    "name": "CI/CD Failure Prediction System",
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#0a0e1a",
+    "background_color": "#0a0e1a"
+}
