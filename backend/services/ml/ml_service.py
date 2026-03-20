@@ -153,7 +153,8 @@ def train_model(
 
     # 3. Random Forest (with CV)
     param_grid = {'n_estimators': [50, 100], 'max_depth': [5, 10, None], 'min_samples_split': [2, 5]}
-    rf_grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, scoring='f1', n_jobs=-1)
+    # Using n_jobs=1 (sequential) instead of -1 to avoid 'un-serialize' errors on Windows/FastAPI
+    rf_grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, scoring='f1', n_jobs=1)
     rf_grid.fit(X_train, y_train)
     rf_best = rf_grid.best_estimator_
 
