@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -33,7 +34,11 @@ export default function Dashboard() {
       ]);
       if (predRes?.data) setData(predRes.data);
       if (statsRes?.data) setStats(statsRes.data);
-    } catch {} finally {
+      setError(null);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("Unable to connect to the AI engine. It might be waking up...");
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -44,10 +49,24 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3' }}>
         <CircularProgress sx={{ color: '#3498db' }} />
+      </Box>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3', p: 3, textAlign: 'center' }}>
+        <Typography variant="h5" color="error" gutterBottom>⚠️ {error || "No data available"}</Typography>
+        <Typography variant="body1" sx={{ mb: 3, maxWidth: 500 }}>
+          The backend service might be starting up. This can take up to 60 seconds on the first load.
+        </Typography>
+        <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#3498db', '&:hover': { bgcolor: '#2980b9' } }}>
+          Retry Connection
+        </Button>
       </Box>
     );
   }
