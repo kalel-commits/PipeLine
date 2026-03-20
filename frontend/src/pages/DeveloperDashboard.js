@@ -241,9 +241,9 @@ export default function Dashboard() {
 
           {/* Small Feature Cards */}
           <Grid item xs={12}>
-            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 {Object.entries(data.features || {}).slice(0, 4).map(([k, v]) => (
-                  <Card key={k} sx={{ py: 3, px: 4, minWidth: 160, flex: 1 }}>
+                  <Card key={k} sx={{ py: 2.5, px: 3, minWidth: 160, flex: 1 }}>
                     <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: '#718096', mb: 1 }}>
                       {k.replace('_', ' ')}
                     </Typography>
