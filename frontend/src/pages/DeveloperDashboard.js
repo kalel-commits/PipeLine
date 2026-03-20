@@ -289,13 +289,13 @@ export default function Dashboard() {
                   </Typography>
                 </Box>
                 <Typography variant="h4" sx={{ color: '#065f46', fontWeight: 800, mb: 0.5 }}>
-                  {data.risk ? '1.2kg' : '0.0kg'}
+                  {data.demo_mode ? '1.2kg' : '0.0kg'}
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#065f46', fontWeight: 500, opacity: 0.8 }}>
                   Equivalent to planting 0.06 trees
                 </Typography>
                 <Box sx={{ mt: 'auto', height: 4, background: 'rgba(16,185,129,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-                  <Box sx={{ width: data.risk ? '75%' : '0%', height: '100%', background: '#10b981' }} />
+                  <Box sx={{ width: data.demo_mode ? '75%' : '0%', height: '100%', background: '#10b981' }} />
                 </Box>
               </Card>
             </Box>

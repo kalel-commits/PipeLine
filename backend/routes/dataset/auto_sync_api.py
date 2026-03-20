@@ -346,11 +346,22 @@ def predict_latest(demo: Optional[str] = Query(None)):
                 parse_weekend(str(commit.get('date', ''))),
                 parse_hour(str(commit.get('date', ''))),
             ]
+            return _build_prediction_response(sample_vals)
         else:
-            # Fallback to a healthy, low-risk baseline when no data is present
-            sample_vals = [20, 0.4, 2, 45, 0, 0, 14] 
-
-        return _build_prediction_response(sample_vals)
+            # Explicit Empty State: 0% risk when no commits exist
+            return {
+                "risk": 0.0,
+                "risk_category": "None",
+                "confidence": 1.0,
+                "reason": "Awaiting first commit for real-time analysis",
+                "top_insight": "System Idle",
+                "features": {f: 0 for f in FEATURE_NAMES},
+                "suggestions": [
+                    {"icon": "⏳", "title": "Waiting for Data", "detail": "The AI Mentor is ready. Once you push or save your first commit, real-time risk analysis will appear here."}
+                ],
+                "shap_values": [],
+                "demo_mode": False
+            }
 
     except Exception as e:
         print("Model prediction error:", e)
