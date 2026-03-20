@@ -274,6 +274,30 @@ export default function Dashboard() {
                      </Typography>
                    </Box>
                 </Card>
+
+              {/* Sustainability Impact */}
+              <Card sx={{ 
+                bgcolor: '#e6f7f2', p: 4, flex: 1.5, minWidth: 260,
+                display: 'flex', flexDirection: 'column', color: '#065f46' 
+              }}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', opacity: 0.6, mb: 4 }}>
+                  Sustainability Impact
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <Typography sx={{ color: '#10b981', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    🌱 CO₂ Emissions Prevented
+                  </Typography>
+                </Box>
+                <Typography variant="h4" sx={{ color: '#065f46', fontWeight: 800, mb: 0.5 }}>
+                  {data.prediction ? '1.2kg' : '0.0kg'}
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#065f46', fontWeight: 500, opacity: 0.8 }}>
+                  Equivalent to planting 0.06 trees
+                </Typography>
+                <Box sx={{ mt: 'auto', height: 4, background: 'rgba(16,185,129,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                  <Box sx={{ width: data.prediction ? '75%' : '0%', height: '100%', background: '#10b981' }} />
+                </Box>
+              </Card>
             </Box>
           </Grid>
         </Grid>

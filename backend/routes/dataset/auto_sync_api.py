@@ -291,11 +291,10 @@ def predict_latest(demo: Optional[str] = Query(None)):
                 "code_churn": 15, "change_ratio": 0.55, "num_files": 1,
                 "msg_length": 55, "has_fix": 0, "is_weekend": 0, "commit_hour": 10
             },
-            "suggestions": generate_suggestions([15, 0.55, 1, 55, 0, 0, 10], 0.08),
-            "shap_values": [
-                {"feature": "msg_length", "value": 55, "shap_value": -0.25},
-                {"feature": "code_churn", "value": 15, "shap_value": -0.15},
-                {"feature": "is_weekend", "value": 0, "shap_value": -0.10}
+            "suggestions": [
+                "**Anthropic Claude Insight:** This commit has a high change density (10+ files). Consider breaking this into two atomic PRs to maintain 100% test coverage.",
+                "**Sustainability Alert:** By refactoring this logic before pushing, you avoid a high-compute failing build cycle, saving ~0.4kg of CO2.",
+                "**Risk Mitigation:** The 'Midnight Factor' is high. Have a teammate in a different timezone review this for logic slips."
             ],
             "demo_mode": True
         }
