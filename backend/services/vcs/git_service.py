@@ -1,10 +1,9 @@
 import os
 import requests
-import pandas as pd
 from sqlalchemy.orm import Session
 from models.vcs_prediction import VCSPrediction
 from models.ml.ml_model import MLModel
-from services.ml.ml_service import extract_features, predict_model
+from services.ml.ml_service import predict_model
 from datetime import datetime
 
 VCS_API_TOKEN = os.getenv("VCS_API_TOKEN", os.getenv("GITLAB_TOKEN"))
@@ -45,6 +44,19 @@ def _extract_push_stats(commits: list, message: str):
     synthetic_del = max(len(message) // 10, 0)
     return synthetic_add, synthetic_del, 1, "synthetic_fallback"
 
+
+def _safe_changes_count(value, default=1):
+    """GitLab may send changes_count like '12' or '12+'."""
+    if value is None:
+        return default
+    if isinstance(value, int):
+        return max(value, default)
+    text = str(value).strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if digits:
+        return max(int(digits), default)
+    return default
+
 def process_vcs_event(db: Session, payload: dict):
     """
     Handle generic VCS events (Push, Merge Request, etc.).
@@ -57,6 +69,7 @@ def process_vcs_event(db: Session, payload: dict):
     branch = payload.get("ref", "").replace("refs/heads/", "")
     commit_sha = payload.get("after")
     message = "VCS Update"
+    target_branch = None
     
     # Defaults for features
     additions = 0
@@ -70,12 +83,31 @@ def process_vcs_event(db: Session, payload: dict):
         mr_id = object_attributes.get("iid")
         project_id = object_attributes.get("target_project_id")
         branch = object_attributes.get("source_branch")
+        target_branch = object_attributes.get("target_branch")
         last_commit = object_attributes.get("last_commit", {})
         commit_sha = last_commit.get("id")
-        message = last_commit.get("message", "Merge Request Update")
+        message = (
+            object_attributes.get("title")
+            or last_commit.get("message")
+            or payload.get("object_attributes", {}).get("description")
+            or "Merge Request Update"
+        )
         additions = _safe_int(object_attributes.get("total_additions"), 0)
         deletions = _safe_int(object_attributes.get("total_deletions"), 0)
-        num_files = _safe_int(object_attributes.get("changes_count"), 1)
+        num_files = _safe_changes_count(object_attributes.get("changes_count"), 1)
+        is_draft = bool(
+            object_attributes.get("work_in_progress")
+            or object_attributes.get("draft")
+            or str(object_attributes.get("title", "")).lower().startswith(("draft:", "wip:"))
+        )
+        mr_labels = object_attributes.get("labels") or []
+        hotfix_label = any("hotfix" in str(lbl).lower() for lbl in mr_labels)
+        if is_draft:
+            # Draft MRs are typically pre-review and can be noisier
+            additions = int(additions * 1.1)
+            deletions = int(deletions * 1.1)
+        if hotfix_label:
+            message = f"{message} hotfix"
         feature_source = "real_diff" if (additions + deletions) > 0 or num_files > 1 else "synthetic_fallback"
     else:
         # ── Standard Push Mapping ──
@@ -128,6 +160,18 @@ def process_vcs_event(db: Session, payload: dict):
     else:
         prediction = predict_model(active_model, features)
     
+    debug_meta = {
+        "event_kind": object_kind,
+        "feature_source": feature_source,
+        "prediction_source": prediction.get("source", "unknown"),
+        "project_id": project_id,
+        "branch": branch,
+        "target_branch": target_branch,
+        "commit_sha": commit_sha,
+        "mr_id": mr_id,
+        "ingested_at": datetime.utcnow().isoformat(),
+    }
+
     # 4. Persistence
     import json
     git_pred = VCSPrediction(
@@ -140,7 +184,7 @@ def process_vcs_event(db: Session, payload: dict):
         explanation=prediction["reason"],
         shap_json=json.dumps(prediction.get("shap_values", [])),
         suggestions_json=json.dumps(prediction.get("suggestions", [])),
-        features_json=json.dumps(features)
+        features_json=json.dumps({**features, "_meta": debug_meta})
     )
     db.add(git_pred)
     db.commit()
@@ -154,11 +198,17 @@ def process_vcs_event(db: Session, payload: dict):
         
     return {
         "status": "success",
+        "event_kind": object_kind,
         "mr_id": mr_id,
+        "project_id": project_id,
+        "branch": branch,
+        "target_branch": target_branch,
+        "commit_sha": commit_sha,
         "risk": prediction["risk"],
         "category": prediction["risk_category"],
         "source": prediction.get("source", feature_source),
         "feature_source": feature_source,
+        "debug": debug_meta,
     }
 
 def post_vcs_mr_comment(project_id: int, mr_id: int, prediction: dict):

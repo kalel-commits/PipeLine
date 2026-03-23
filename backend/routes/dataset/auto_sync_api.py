@@ -361,6 +361,7 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
                 "demo_mode": False,
                 "mr_id": latest_git.mr_id,
                 "source": "vcs_prediction_db",
+                "debug": safe_parse(latest_git.features_json, {}).get("_meta", {}),
             }
             
         return {

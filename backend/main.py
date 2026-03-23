@@ -94,15 +94,35 @@ async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
     """The ULTIMATE Webhook endpoint that serves both new and legacy URLs."""
     payload = await request.json()
     timestamp = datetime.now().isoformat()
-    WEBHOOK_LOGS.append({"time": timestamp, "kind": payload.get("object_kind", "unknown")})
+    WEBHOOK_LOGS.append({
+        "time": timestamp,
+        "kind": payload.get("object_kind", "unknown"),
+        "project_id": payload.get("project_id") or payload.get("project", {}).get("id"),
+        "event_name": payload.get("event_name"),
+    })
     if len(WEBHOOK_LOGS) > 10: WEBHOOK_LOGS.pop(0)
 
     from services.vcs.git_service import process_vcs_event
     try:
-        process_vcs_event(db, payload)
-        return {"status": "success", "source": "ROOT_OVERRIDE_V7"}
+        result = process_vcs_event(db, payload)
+        WEBHOOK_LOGS.append({
+            "time": timestamp,
+            "processed": True,
+            "kind": result.get("event_kind"),
+            "mr_id": result.get("mr_id"),
+            "branch": result.get("branch"),
+            "target_branch": result.get("target_branch"),
+            "commit_sha": result.get("commit_sha"),
+            "risk": result.get("risk"),
+            "category": result.get("category"),
+            "source": result.get("source"),
+            "feature_source": result.get("feature_source"),
+        })
+        if len(WEBHOOK_LOGS) > 10: WEBHOOK_LOGS.pop(0)
+        return {"status": "success", "source": "ROOT_OVERRIDE_V7", "result": result}
     except Exception as e:
         WEBHOOK_LOGS.append({"time": timestamp, "error": str(e)})
+        if len(WEBHOOK_LOGS) > 10: WEBHOOK_LOGS.pop(0)
         return {"status": "error", "message": str(e)}
 
 @app.get("/logs")
