@@ -24,10 +24,9 @@ async def vcs_webhook(
     """
     payload = await request.json()
     
-    # Event verification: Ensure it's a Merge Request event
+    # Event verification: Support both MR and Push events
     event_name = request.headers.get("X-Gitlab-Event")
-    if event_name != "Merge Request Hook":
-        # We only care about MR events for this integration
+    if event_name not in ["Merge Request Hook", "Push Hook"]:
         return {"status": "ignored", "reason": f"Event type {event_name} not supported"}
 
     # 1. Process the event (Synchronous processing for immediate DB sync)
