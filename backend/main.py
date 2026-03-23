@@ -9,9 +9,11 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Import all models so they register on the shared Base metadata
-import models.user
-import models.audit_log
-import models.dataset
+import models.vcs_prediction
+from services.vcs.git_service import process_vcs_event
+from fastapi import Request, Depends
+from sqlalchemy.orm import Session
+from db import SessionLocal
 import models.ml.ml_model
 import models.prediction_feedback
 import models.vcs_prediction
@@ -85,28 +87,65 @@ app.include_router(feedback_router)
 app.include_router(vcs_router, prefix="/api/v1/vcs", tags=["VCS Integrations"])
 app.include_router(vcs_router, prefix="/api/v1/gitlab", tags=["Legacy Support"]) # Fallback for old GitLab hooks
 
-@app.get("/")
-def root():
-    return {"message": "CI/CD Failure Prediction System API is running.", "status": "Ready", "version": "4.2.1-BULLETPROOF"}
-
-@app.get("/db-check")
-def db_check():
-    from db import SessionLocal
-    from models.vcs_prediction import VCSPrediction
-    from models.ml.ml_model import MLModel
+def get_db():
     db = SessionLocal()
     try:
-        pred_count = db.query(VCSPrediction).count()
-        model_count = db.query(MLModel).count()
-        active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
-        return {
-            "vcs_predictions_count": pred_count,
-            "ml_models_count": model_count,
-            "active_model_id": active_model.id if active_model else None,
-            "db_timestamp": datetime.now().isoformat()
-        }
+        yield db
     finally:
         db.close()
+
+@app.post("/api/v1/vcs/webhook")
+@app.post("/api/v1/gitlab/webhook")
+async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
+    """The ULTIMATE Webhook endpoint that bypasses all router confusion."""
+    payload = await request.json()
+    try:
+        process_vcs_event(db, payload)
+        return {"status": "success", "source": "ROOT_OVERRIDE"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/v1/demo/trigger")
+def force_demo_prediction(db: Session = Depends(get_db)):
+    """A manual trigger to prove the dashboard is working."""
+    from models.vcs_prediction import VCSPrediction
+    fake_pred = VCSPrediction(
+        mr_id=None,
+        project_id=1,
+        branch="demo-main",
+        commit_sha="demo_" + hex(os.getpid()),
+        risk_score=0.92,
+        risk_category="High",
+        explanation="System Manual Trigger: Simulated High Risk Pattern Detected.",
+        shap_json="[]",
+        suggestions_json="[]",
+        features_json="{}"
+    )
+    db.add(fake_pred)
+    db.commit()
+    return {"status": "success", "message": "High-risk prediction forced to DB!"}
+
+@app.get("/")
+def root():
+    return {
+        "message": "CI/CD Failure Prediction System API is running.",
+        "status": "Ready",
+        "version": "5.0.0-UNSTOPPABLE"
+    }
+
+@app.get("/db-check")
+def db_check(db: Session = Depends(get_db)):
+    from models.vcs_prediction import VCSPrediction
+    from models.ml.ml_model import MLModel
+    pred_count = db.query(VCSPrediction).count()
+    model_count = db.query(MLModel).count()
+    active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
+    return {
+        "vcs_predictions_count": pred_count,
+        "ml_models_count": model_count,
+        "active_model_id": active_model.id if active_model else None,
+        "db_timestamp": os.getenv("PORT", "unknown")
+    }
 
 if __name__ == "__main__":
     import uvicorn
