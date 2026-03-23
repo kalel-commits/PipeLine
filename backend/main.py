@@ -112,10 +112,11 @@ def force_demo_prediction(db: Session = Depends(get_db)):
     from models.vcs_prediction import VCSPrediction
     
     # Mock SHAP Data for demo visualization
+    # Note: Frontend expects 'shap_value' specifically for toFixed(2)
     mock_shap = [
-        {"feature": "Code Churn", "contribution": 45.2, "value": 850},
-        {"feature": "Commit Hour", "contribution": 32.8, "value": "23:00"},
-        {"feature": "File Coupling", "contribution": 22.0, "value": "12 files"}
+        {"feature": "Code Churn", "shap_value": 0.452, "value": 850},
+        {"feature": "Commit Hour", "shap_value": 0.328, "value": "23:00"},
+        {"feature": "File Coupling", "shap_value": 0.220, "value": "12 files"}
     ]
     
     # Mock AI Mentor Suggestions
@@ -134,7 +135,7 @@ def force_demo_prediction(db: Session = Depends(get_db)):
         explanation="Simulated High Risk Pattern: High Churn + Late Night Activity.",
         shap_json=json.dumps(mock_shap),
         suggestions_json=json.dumps(mock_suggestions),
-        features_json="{}"
+        features_json='{"code_churn": 850, "commit_hour": 23, "num_files": 12, "msg_length": 45}'
     )
     db.add(fake_pred)
     db.commit()
@@ -145,7 +146,7 @@ def root():
     return {
         "message": "CI/CD Failure Prediction System API is running.",
         "status": "Ready",
-        "version": "5.5.5-MASTER"
+        "version": "6.0.0-FINAL-BOSS"
     }
 
 @app.get("/db-check")
