@@ -5,8 +5,8 @@ class VCSPrediction(Base):
     __tablename__ = "vcs_predictions"
     
     id = Column(Integer, primary_key=True, index=True)
-    mr_id = Column(Integer, nullable=False)
-    project_id = Column(Integer, nullable=False)
+    mr_id = Column(Integer, nullable=True)
+    project_id = Column(Integer, nullable=True)
     branch = Column(String(100), nullable=True)
     commit_sha = Column(String(40), nullable=True)
     
