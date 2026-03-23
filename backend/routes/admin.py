@@ -33,7 +33,7 @@ class UserAdminResponse(BaseModel):
     is_locked: bool
     failed_login_attempts: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- User Management ---
 

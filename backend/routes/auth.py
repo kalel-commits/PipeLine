@@ -36,7 +36,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_locked: bool
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 @router.post("/register", response_model=UserResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db), request: Request = None):
