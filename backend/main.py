@@ -72,7 +72,7 @@ def on_startup():
                 dataset_id=1,
                 algorithm="random_forest",
                 version="2026_LIVE_FIX",
-                metrics=json.dumps(metrics),
+                metrics=metrics,
                 model_path="ml/models/model_1_random_forest_2026_LIVE_FIX.joblib",
                 trained_by=1,
                 is_active=True
