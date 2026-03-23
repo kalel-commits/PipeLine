@@ -30,10 +30,14 @@ async def vcs_webhook(
         # We only care about MR events for this integration
         return {"status": "ignored", "reason": f"Event type {event_name} not supported"}
 
-    # 1. Process the event (Synchronous for demo reliability)
+    # 1. Process the event (Synchronous processing for immediate DB sync)
     try:
-        result = process_mr_event(db, payload)
-        return {"status": "success", "prediction": result}
+        process_vcs_event(db, payload)
+        
+        from models.vcs_prediction import VCSPrediction
+        count = db.query(VCSPrediction).count()
+        
+        return {"status": "success", "total_captured": count}
     except Exception as e:
         import traceback
         print(f"ERROR processing GitLab MR: {str(e)}")
