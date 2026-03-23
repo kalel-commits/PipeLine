@@ -83,6 +83,7 @@ app.include_router(auto_sync_router)
 app.include_router(ml_router)
 app.include_router(feedback_router)
 app.include_router(vcs_router, prefix="/api/v1/vcs", tags=["VCS Integrations"])
+app.include_router(vcs_router, prefix="/api/v1/gitlab", tags=["Legacy Support"]) # Fallback for old GitLab hooks
 
 @app.get("/")
 def root():
