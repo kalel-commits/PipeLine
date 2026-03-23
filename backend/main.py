@@ -107,8 +107,23 @@ async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/api/v1/demo/trigger")
 def force_demo_prediction(db: Session = Depends(get_db)):
-    """A manual trigger to prove the dashboard is working."""
+    """A manual trigger to prove the dashboard is working with rich data."""
+    import json
     from models.vcs_prediction import VCSPrediction
+    
+    # Mock SHAP Data for demo visualization
+    mock_shap = [
+        {"feature": "Code Churn", "contribution": 45.2, "value": 850},
+        {"feature": "Commit Hour", "contribution": 32.8, "value": "23:00"},
+        {"feature": "File Coupling", "contribution": 22.0, "value": "12 files"}
+    ]
+    
+    # Mock AI Mentor Suggestions
+    mock_suggestions = [
+        {"icon": "🌙", "title": "Fatigue Monitoring", "detail": "This late-night commit has high churn. Ensure at least two peer reviews before merging."},
+        {"icon": "🧠", "title": "Complexity Alert", "detail": "The diff size is exceptionally large. Consider breaking this into smaller PRs to reduce regression risk."}
+    ]
+
     fake_pred = VCSPrediction(
         mr_id=None,
         project_id=1,
@@ -116,21 +131,21 @@ def force_demo_prediction(db: Session = Depends(get_db)):
         commit_sha="demo_" + hex(os.getpid()),
         risk_score=0.92,
         risk_category="High",
-        explanation="System Manual Trigger: Simulated High Risk Pattern Detected.",
-        shap_json="[]",
-        suggestions_json="[]",
+        explanation="Simulated High Risk Pattern: High Churn + Late Night Activity.",
+        shap_json=json.dumps(mock_shap),
+        suggestions_json=json.dumps(mock_suggestions),
         features_json="{}"
     )
     db.add(fake_pred)
     db.commit()
-    return {"status": "success", "message": "High-risk prediction forced to DB!"}
+    return {"status": "success", "message": "High-risk prediction WITH RICH DATA forced to DB!"}
 
 @app.get("/")
 def root():
     return {
         "message": "CI/CD Failure Prediction System API is running.",
         "status": "Ready",
-        "version": "5.0.0-UNSTOPPABLE"
+        "version": "5.5.5-MASTER"
     }
 
 @app.get("/db-check")
