@@ -77,6 +77,18 @@ def on_startup():
     finally:
         db.close()
 
+@app.post("/api/v1/vcs/webhook")
+@app.post("/api/v1/gitlab/webhook")
+async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
+    """The ULTIMATE Webhook endpoint that serves both new and legacy URLs."""
+    payload = await request.json()
+    from services.vcs.git_service import process_vcs_event
+    try:
+        process_vcs_event(db, payload)
+        return {"status": "success", "source": "ROOT_OVERRIDE_V7"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(dataset_router)
@@ -84,26 +96,7 @@ app.include_router(feature_extraction_router)
 app.include_router(auto_sync_router)
 app.include_router(ml_router)
 app.include_router(feedback_router)
-app.include_router(vcs_router, prefix="/api/v1/vcs", tags=["VCS Integrations"])
-app.include_router(vcs_router, prefix="/api/v1/gitlab", tags=["Legacy Support"]) # Fallback for old GitLab hooks
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.post("/api/v1/vcs/webhook")
-@app.post("/api/v1/gitlab/webhook")
-async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
-    """The ULTIMATE Webhook endpoint that bypasses all router confusion."""
-    payload = await request.json()
-    try:
-        process_vcs_event(db, payload)
-        return {"status": "success", "source": "ROOT_OVERRIDE"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+# VCS Router removed - Logic now handled by root_vcs_webhook above
 
 @app.get("/api/v1/demo/trigger")
 def force_demo_prediction(db: Session = Depends(get_db)):
