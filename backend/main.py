@@ -93,14 +93,17 @@ def root():
 def db_check():
     from db import SessionLocal
     from models.vcs_prediction import VCSPrediction
+    from models.ml.ml_model import MLModel
     db = SessionLocal()
     try:
-        count = db.query(VCSPrediction).count()
-        latest = db.query(VCSPrediction).order_by(VCSPrediction.created_at.desc()).first()
+        pred_count = db.query(VCSPrediction).count()
+        model_count = db.query(MLModel).count()
+        active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
         return {
-            "vcs_predictions_count": count,
-            "latest_risk": latest.risk_score if latest else None,
-            "latest_sha": latest.commit_sha if latest else None
+            "vcs_predictions_count": pred_count,
+            "ml_models_count": model_count,
+            "active_model_id": active_model.id if active_model else None,
+            "db_timestamp": datetime.now().isoformat()
         }
     finally:
         db.close()
