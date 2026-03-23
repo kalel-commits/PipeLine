@@ -87,7 +87,23 @@ app.include_router(vcs_router, prefix="/api/v1/gitlab", tags=["Legacy Support"])
 
 @app.get("/")
 def root():
-    return {"message": "CI/CD Failure Prediction System API is running."}
+    return {"message": "CI/CD Failure Prediction System API is running.", "status": "Ready", "version": "4.2.1-BULLETPROOF"}
+
+@app.get("/db-check")
+def db_check():
+    from db import SessionLocal
+    from models.vcs_prediction import VCSPrediction
+    db = SessionLocal()
+    try:
+        count = db.query(VCSPrediction).count()
+        latest = db.query(VCSPrediction).order_by(VCSPrediction.created_at.desc()).first()
+        return {
+            "vcs_predictions_count": count,
+            "latest_risk": latest.risk_score if latest else None,
+            "latest_sha": latest.commit_sha if latest else None
+        }
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn
