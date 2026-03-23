@@ -14,6 +14,7 @@ from services.vcs.git_service import process_vcs_event
 from fastapi import Request, Depends
 from sqlalchemy.orm import Session
 from db import SessionLocal
+from datetime import datetime
 import models.ml.ml_model
 import models.prediction_feedback
 import models.vcs_prediction
@@ -28,6 +29,13 @@ from routes.feedback_api import router as feedback_router
 from routes.vcs.webhook import router as vcs_router
 
 app = FastAPI(title="CI/CD Failure Prediction System API", version="1.0.0")
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # CORS setup for frontend communication
 app.add_middleware(
