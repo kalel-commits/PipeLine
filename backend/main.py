@@ -148,10 +148,9 @@ def force_demo_prediction(db: Session = Depends(get_db)):
 
 @app.get("/")
 def root():
-    return {
         "message": "CI/CD Failure Prediction System API is running.",
         "status": "Ready",
-        "version": "6.0.0-FINAL-BOSS"
+        "version": "6.1.0-DIAGNOSTIC"
     }
 
 @app.get("/db-check")
