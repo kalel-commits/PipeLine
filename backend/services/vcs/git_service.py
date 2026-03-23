@@ -47,6 +47,13 @@ def process_vcs_event(db: Session, payload: dict):
             message = last_commit.get("message", "Commit Update")
             additions = len(message) * 2
             deletions = len(message) // 2
+        else:
+            # ── Handle GitLab 'Test' button or Empty Push ──
+            commit_sha = payload.get("after") or "test_sha_placeholder"
+            message = "GitLab Test Event / Empty Push"
+            additions = 50
+            deletions = 10
+            print("Processing GitLab Test/Empty Push Event")
         
     # 2. Extract Features (Self-Contained Logic)
     # We engineere the 7 features directly here to avoid cross-module import issues on Render
