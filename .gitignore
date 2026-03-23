@@ -19,7 +19,8 @@ npm-debug.log
 yarn-error.log
 
 # IDEs
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .idea/
 *.swp
 *.swo
