@@ -18,7 +18,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:8000";
+const API = process.env.REACT_APP_API_URL || "https://pipeline-9ux3.onrender.com";
 
 export default function Dashboard() {
   const location = useLocation();
