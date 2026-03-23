@@ -19,6 +19,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
 const API = process.env.REACT_APP_API_URL || "https://pipeline-9ux3.onrender.com";
+const DEMO_MODE_ENABLED = process.env.REACT_APP_ENABLE_DEMO_MODE === "true";
 
 export default function Dashboard() {
   const location = useLocation();
@@ -27,11 +28,12 @@ export default function Dashboard() {
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const safeSearch = DEMO_MODE_ENABLED ? location.search : "";
 
   const fetchAll = useCallback(async () => {
     try {
       const [predRes, statsRes] = await Promise.all([
-        axios.get(`${API}/predict/latest${location.search}`).catch(() => null),
+        axios.get(`${API}/predict/latest${safeSearch}`).catch(() => null),
         axios.get(`${API}/training/stats`).catch(() => null),
       ]);
       if (predRes?.data) setData(predRes.data);
@@ -43,7 +45,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [safeSearch]);
 
   useEffect(() => {
     fetchAll();
