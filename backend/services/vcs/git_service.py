@@ -5,43 +5,63 @@ from sqlalchemy.orm import Session
 from models.vcs_prediction import VCSPrediction
 from models.ml.ml_model import MLModel
 from services.ml.ml_service import extract_features, predict_model
+from datetime import datetime
 
 VCS_API_TOKEN = os.getenv("VCS_API_TOKEN", os.getenv("GITLAB_TOKEN"))
 
-def process_mr_event(db: Session, payload: dict):
+def process_vcs_event(db: Session, payload: dict):
     """
-    Handle GitLab Merge Request Hook payload.
+    Handle generic VCS events (Push, Merge Request, etc.).
     Extracts metadata, performs ML risk prediction, persists in DB, and posts to the VCS provider.
     """
-    object_attributes = payload.get("object_attributes", {})
-    mr_id = object_attributes.get("iid")
-    project_id = object_attributes.get("target_project_id")
-    branch = object_attributes.get("source_branch")
-    last_commit = object_attributes.get("last_commit", {})
-    commit_sha = last_commit.get("id")
+    # 1. Payload Dispatcher
+    object_kind = payload.get("object_kind", "push")
+    mr_id = None
+    project_id = payload.get("project_id") or payload.get("project", {}).get("id")
+    branch = payload.get("ref", "").replace("refs/heads/", "")
+    commit_sha = payload.get("after")
+    message = "VCS Update"
     
-    # 1. Prepare raw metadata for feature extraction
-    # GitLab MR hooks provide some stats in object_attributes
+    # Defaults for features
+    additions = 0
+    deletions = 0
+    num_files = 1
+
+    if object_kind == "merge_request":
+        # ── GitLab Merge Request Mapping ──
+        object_attributes = payload.get("object_attributes", {})
+        mr_id = object_attributes.get("iid")
+        project_id = object_attributes.get("target_project_id")
+        branch = object_attributes.get("source_branch")
+        last_commit = object_attributes.get("last_commit", {})
+        commit_sha = last_commit.get("id")
+        message = last_commit.get("message", "Merge Request Update")
+        additions = object_attributes.get("total_additions", 15)
+        deletions = object_attributes.get("total_deletions", 5)
+    else:
+        # ── Standard Push Mapping ──
+        commits = payload.get("commits", [])
+        if commits:
+            last_commit = commits[0]
+            commit_sha = last_commit.get("id")
+            message = last_commit.get("message", "Commit Update")
+            # In a real push hook, GitLab doesn't always include line counts in the root JSON
+            # so we use placeholders or the sum of the last commit's message length as a proxy for complexity
+            additions = len(message) * 2
+            deletions = len(message) // 2
+        
+    # 2. Extract Features
     raw_data = {
-        "additions": object_attributes.get("total_time_spent", 0) % 50, # Dummy heuristic if real stats missing
-        "deletions": object_attributes.get("time_estimate", 0) % 50,
-        "num_files": 1, 
-        "message": last_commit.get("message", "Merge Request Update"),
-        "timestamp": last_commit.get("timestamp")
+        "added": additions,
+        "removed": deletions,
+        "files_changed": num_files,
+        "message": message,
+        "date": datetime.now().strftime("%a %b %d %H:%M:%S %Y")
     }
     
-    # Try to find real stats in the payload (GitLab often includes them in object_attributes)
-    if "total_additions" in object_attributes:
-        raw_data["additions"] = object_attributes["total_additions"]
-    if "total_deletions" in object_attributes:
-        raw_data["deletions"] = object_attributes["total_deletions"]
-    
-    # Heuristic based on MR description length or other fields if available
-    # In a real integration, we'd call /projects/:id/merge_requests/:iid/changes
-    
-    # 2. Extract Features
     df = pd.DataFrame([raw_data])
-    features_df = extract_features(df)
+    from routes.dataset.auto_sync_api import extract_features as auto_extract
+    features_df = auto_extract(df)
     features = features_df.iloc[0].to_dict()
     
     # 3. Get Active Model & Predict
@@ -51,9 +71,8 @@ def process_mr_event(db: Session, payload: dict):
         
     prediction = predict_model(active_model, features)
     
+    # 4. Persistence
     import json
-    
-    # 4. Persist to DB
     git_pred = VCSPrediction(
         mr_id=mr_id,
         project_id=project_id,
@@ -70,7 +89,7 @@ def process_mr_event(db: Session, payload: dict):
     db.commit()
     db.refresh(git_pred)
     
-    # 5. Post comment to VCS (e.g. GitLab/GitHub adapter)
+    # 5. Comment Logic (MR only)
     if VCS_API_TOKEN and mr_id and project_id:
         post_vcs_mr_comment(project_id, mr_id, prediction)
         git_pred.posted_to_vcs = True

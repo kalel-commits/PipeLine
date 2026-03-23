@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from db import SessionLocal
-from services.vcs.git_service import process_mr_event
+from services.vcs.git_service import process_vcs_event
 
 router = APIRouter()
 
