@@ -15,30 +15,32 @@ def get_db():
 @router.post("/webhook")
 async def vcs_webhook(
     request: Request,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Endpoint for generic VCS Webhooks (e.g., GitLab, GitHub, Bitbucket).
-    We process the event in the background to ensure fast response to GitLab (200 OK).
+    Endpoint for generic VCS Webhooks.
+    We process everything to be safe.
     """
     payload = await request.json()
+    print(f"DEBUG: Webhook received. Kind: {payload.get('object_kind', 'unknown')}")
     
-    # Event verification: Support both MR and Push events
-    event_name = request.headers.get("X-Gitlab-Event")
-    if event_name not in ["Merge Request Hook", "Push Hook"]:
-        return {"status": "ignored", "reason": f"Event type {event_name} not supported"}
-
-    # 1. Process the event (Synchronous processing for immediate DB sync)
+    # Process the event
     try:
         process_vcs_event(db, payload)
-        
-        from models.vcs_prediction import VCSPrediction
         count = db.query(VCSPrediction).count()
-        
         return {"status": "success", "total_captured": count}
     except Exception as e:
-        import traceback
-        print(f"ERROR processing GitLab MR: {str(e)}")
-        traceback.print_exc()
         return {"status": "error", "message": str(e)}
+
+@router.get("/debug")
+def debug_captured_data(db: Session = Depends(get_db)):
+    """A public route to verify if data exists in the cloud DB."""
+    count = db.query(VCSPrediction).count()
+    all_data = db.query(VCSPrediction).all()
+    return {
+        "count": count,
+        "latest_entries": [
+            {"id": x.id, "risk": x.risk_score, "branch": x.branch, "mr_id": x.mr_id} 
+            for x in all_data
+        ]
+    }
