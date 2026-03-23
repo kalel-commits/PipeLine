@@ -10,7 +10,7 @@ from collections import deque
 from sqlalchemy.orm import Session
 from db import SessionLocal
 from models.ml.ml_model import MLModel
-from models.gitlab_prediction import GitLabPrediction
+from models.vcs_prediction import VCSPrediction
 from services.ml.ml_service import predict_model, generate_synthetic_features, extract_features
 
 router = APIRouter()
@@ -297,7 +297,7 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
         features = features_df.iloc[0].to_dict()
     else:
         # ── Fallback to latest GitLab MR Prediction ──
-        latest_git = db.query(GitLabPrediction).order_by(GitLabPrediction.created_at.desc()).first()
+        latest_git = db.query(VCSPrediction).order_by(VCSPrediction.created_at.desc()).first()
         if latest_git:
             # Helper to parse JSON safely
             import json
@@ -317,7 +317,6 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
                 "suggestions": safe_parse(latest_git.suggestions_json, []),
                 "features": safe_parse(latest_git.features_json, {}),
                 "demo_mode": False,
-                "is_git_mr": True,
                 "mr_id": latest_git.mr_id
             }
             

@@ -2,16 +2,16 @@ import os
 import requests
 import pandas as pd
 from sqlalchemy.orm import Session
-from models.gitlab_prediction import GitLabPrediction
+from models.vcs_prediction import VCSPrediction
 from models.ml.ml_model import MLModel
 from services.ml.ml_service import extract_features, predict_model
 
-GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
+VCS_API_TOKEN = os.getenv("VCS_API_TOKEN", os.getenv("GITLAB_TOKEN"))
 
 def process_mr_event(db: Session, payload: dict):
     """
     Handle GitLab Merge Request Hook payload.
-    Extracts metadata, performs ML risk prediction, persists in DB, and posts to GitLab.
+    Extracts metadata, performs ML risk prediction, persists in DB, and posts to the VCS provider.
     """
     object_attributes = payload.get("object_attributes", {})
     mr_id = object_attributes.get("iid")
@@ -54,7 +54,7 @@ def process_mr_event(db: Session, payload: dict):
     import json
     
     # 4. Persist to DB
-    git_pred = GitLabPrediction(
+    git_pred = VCSPrediction(
         mr_id=mr_id,
         project_id=project_id,
         branch=branch,
@@ -70,10 +70,10 @@ def process_mr_event(db: Session, payload: dict):
     db.commit()
     db.refresh(git_pred)
     
-    # 5. Post to GitLab MR (if token is set)
-    if GITLAB_TOKEN:
-        post_mr_comment(project_id, mr_id, prediction)
-        git_pred.posted_to_gitlab = True
+    # 5. Post comment to VCS (e.g. GitLab/GitHub adapter)
+    if VCS_API_TOKEN and mr_id and project_id:
+        post_vcs_mr_comment(project_id, mr_id, prediction)
+        git_pred.posted_to_vcs = True
         db.commit()
         
     return {
@@ -83,12 +83,12 @@ def process_mr_event(db: Session, payload: dict):
         "category": prediction["risk_category"]
     }
 
-def post_mr_comment(project_id: int, mr_id: int, prediction: dict):
+def post_vcs_mr_comment(project_id: int, mr_id: int, prediction: dict):
     """
     Post a formatted risk report back to the GitLab Merge Request.
     """
     url = f"https://gitlab.com/api/v4/projects/{project_id}/merge_requests/{mr_id}/notes"
-    headers = {"PRIVATE-TOKEN": GITLAB_TOKEN}
+    headers = {"PRIVATE-TOKEN": VCS_API_TOKEN}
     
     risk_percent = round(prediction["risk"] * 100, 1)
     status_icon = "🔴" if prediction["risk"] > 0.65 else ("🟡" if prediction["risk"] > 0.35 else "🟢")

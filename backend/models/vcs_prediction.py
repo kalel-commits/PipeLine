@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, func
 from models.base import Base
 
-class GitLabPrediction(Base):
-    __tablename__ = "gitlab_predictions"
+class VCSPrediction(Base):
+    __tablename__ = "vcs_predictions"
     
     id = Column(Integer, primary_key=True, index=True)
     mr_id = Column(Integer, nullable=False)
@@ -20,6 +20,6 @@ class GitLabPrediction(Base):
     features_json = Column(String(1000), nullable=True)
     
     # Track if we successfully posted the comment to GitLab
-    posted_to_gitlab = Column(Boolean, default=False)
+    posted_to_vcs = Column(Boolean, default=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

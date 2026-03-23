@@ -14,7 +14,7 @@ import models.audit_log
 import models.dataset
 import models.ml.ml_model
 import models.prediction_feedback
-import models.gitlab_prediction
+import models.vcs_prediction
 
 from routes.auth import router as auth_router
 from routes.admin import router as admin_router
@@ -23,7 +23,7 @@ from routes.dataset.feature_extraction_api import router as feature_extraction_r
 from routes.dataset.auto_sync_api import router as auto_sync_router
 from routes.ml.ml_api import router as ml_router
 from routes.feedback_api import router as feedback_router
-from routes.gitlab.gitlab_webhook import router as gitlab_router
+from routes.vcs.webhook import router as vcs_router
 
 app = FastAPI(title="CI/CD Failure Prediction System API", version="1.0.0")
 
@@ -82,7 +82,7 @@ app.include_router(feature_extraction_router)
 app.include_router(auto_sync_router)
 app.include_router(ml_router)
 app.include_router(feedback_router)
-app.include_router(gitlab_router, prefix="/api/v1/gitlab", tags=["GitLab"])
+app.include_router(vcs_router, prefix="/api/v1/vcs", tags=["VCS Integrations"])
 
 @app.get("/")
 def root():

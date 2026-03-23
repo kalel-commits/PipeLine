@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from db import SessionLocal
-from services.gitlab.gitlab_service import process_mr_event
+from services.vcs.git_service import process_mr_event
 
 router = APIRouter()
 
@@ -13,13 +13,13 @@ def get_db():
         db.close()
 
 @router.post("/webhook")
-async def gitlab_webhook(
+async def vcs_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
-    Endpoint for GitLab Webhooks.
+    Endpoint for generic VCS Webhooks (e.g., GitLab, GitHub, Bitbucket).
     We process the event in the background to ensure fast response to GitLab (200 OK).
     """
     payload = await request.json()
