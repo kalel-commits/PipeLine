@@ -71,23 +71,35 @@ def on_startup():
             )
             db.add(default_model)
             db.commit()
-            print("Auto-seeding successful.")
+            print("Auto-seeding model successful.")
     except Exception as e:
         print(f"Error auto-seeding DB: {e}")
     finally:
         db.close()
+
+# Global log buffer for cloud debugging
+WEBHOOK_LOGS = []
 
 @app.post("/api/v1/vcs/webhook")
 @app.post("/api/v1/gitlab/webhook")
 async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
     """The ULTIMATE Webhook endpoint that serves both new and legacy URLs."""
     payload = await request.json()
+    timestamp = datetime.now().isoformat()
+    WEBHOOK_LOGS.append({"time": timestamp, "kind": payload.get("object_kind", "unknown")})
+    if len(WEBHOOK_LOGS) > 10: WEBHOOK_LOGS.pop(0)
+
     from services.vcs.git_service import process_vcs_event
     try:
         process_vcs_event(db, payload)
         return {"status": "success", "source": "ROOT_OVERRIDE_V7"}
     except Exception as e:
+        WEBHOOK_LOGS.append({"time": timestamp, "error": str(e)})
         return {"status": "error", "message": str(e)}
+
+@app.get("/logs")
+def get_logs():
+    return {"logs": WEBHOOK_LOGS}
 
 app.include_router(auth_router)
 app.include_router(admin_router)
