@@ -1,188 +1,109 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import api from '../services/api';
-import SystemStats from '../components/SystemStats';
-import AuditLogTable from '../components/AuditLogTable';
-import {
-  Box, Typography, Table, TableHead, TableBody, TableRow, TableCell,
-  TableContainer, IconButton, Tooltip, Alert, CircularProgress,
-  Pagination, Chip
-} from '@mui/material';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import BlockIcon from '@mui/icons-material/Block';
-import LockOpenIcon from '@mui/icons-material/LockOpen';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import api from '../api/client';
+import { Box, Typography, Grid, CircularProgress, Alert, Pagination } from '@mui/material';
+import Sidebar from '../components/layout/Sidebar';
+import StatsCard from '../components/dashboard/StatsCard';
+import AuditLogTable from '../components/dashboard/AuditLogTable';
+import UserTable from '../components/dashboard/UserTable';
+import PeopleIcon from '@mui/icons-material/People';
+import StorageIcon from '@mui/icons-material/Storage';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import SpeedIcon from '@mui/icons-material/Speed';
 
 const PAGE_SIZE = 10;
 
-const roleColor = { Developer: 'primary', Analyst: 'success', Admin: 'warning' };
-
-const AdminDashboard = () => {
-  const location = useLocation();
+export default function AdminDashboard() {
+  const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => { fetchUsers(); }, [page]);
 
-  const fetchUsers = async () => {
-    setLoading(true); setError('');
+  const fetchData = useCallback(async () => {
     try {
-      const res = await api.get(`/admin/users?page=${page}&size=${PAGE_SIZE}${location.search ? '&' + location.search.substring(1) : ''}`);
-      setUsers(res.data.users || []);
-      setTotal(res.data.total || 0);
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to load users'); }
-    setLoading(false);
+      const [statsRes, usersRes, logsRes] = await Promise.all([
+        api.get('/admin/system-stats'),
+        api.get(`/admin/users?page=${page}&size=${PAGE_SIZE}`),
+        api.get('/admin/audit-logs?size=10')
+      ]);
+      setStats(statsRes.data);
+      setUsers(usersRes.data.users || []);
+      setTotalUsers(usersRes.data.total || 0);
+      setLogs(logsRes.data.logs);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  const handleUserAction = async (userId, action) => {
+    if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
+    try {
+      await api.post(`/admin/users/${userId}/action`, { action });
+      fetchData();
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  const act = async (userId, action) => {
-    if (!window.confirm(`${action} this user?`)) return;
-    try {
-      if (action === 'activate') await api.put(`/admin/users/${userId}/activate`);
-      if (action === 'deactivate') await api.put(`/admin/users/${userId}/deactivate`);
-      if (action === 'unlock') await api.put(`/admin/users/${userId}/unlock`);
-      if (action === 'delete') await api.delete(`/admin/users/${userId}`);
-      fetchUsers();
-    } catch (err) { setError(err.response?.data?.detail || 'Action failed'); }
-  };
-
-  const Panel = ({ children, title }) => (
-    <Box sx={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', mb: 2.5, overflow: 'hidden' }}>
-      {title && (
-        <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5 }}>
-          <Typography className="section-label">{title}</Typography>
-        </Box>
-      )}
-      {children}
+  if (loading) return (
+    <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3' }}>
+      <CircularProgress />
     </Box>
   );
 
   return (
-    <Box className="page-container">
-      {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <AdminPanelSettingsIcon sx={{ fontSize: 18, color: '#f59e0b' }} />
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5ede3' }}>
+      <Sidebar />
+      <Box sx={{ flex: 1, p: 6 }}>
+        <Box sx={{ mb: 6 }}>
+          <Typography variant="h3" sx={{ color: '#2d3748' }}>AI Console</Typography>
+          <Typography variant="body1" sx={{ color: '#718096' }}>System governance and audit transparency.</Typography>
         </Box>
-        <Box>
-          <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.02em' }}>Admin Console</Typography>
-          <Typography variant="body2" color="text.secondary">System overview, user management, and audit logging</Typography>
-        </Box>
+
+        {error && <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>}
+
+        <Grid container spacing={4} sx={{ mb: 6 }}>
+          <Grid item xs={12} md={3}>
+            <StatsCard label="Total Users" value={stats?.total_users} icon={<PeopleIcon />} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <StatsCard label="Datasets" value={stats?.total_datasets} icon={<StorageIcon />} color="#9b59b6" />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <StatsCard label="Models Trained" value={stats?.total_models} icon={<PsychologyIcon />} color="#e67e22" />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <StatsCard label="Predictions Run" value={stats?.total_predictions} icon={<SpeedIcon />} color="#1abc9c" />
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={4}>
+          <Grid item xs={12} lg={7}>
+            <Typography variant="h5" sx={{ color: '#2d3748', mb: 3, fontWeight: 800 }}>User Management</Typography>
+            <UserTable users={users} onAction={handleUserAction} />
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Pagination count={Math.ceil(totalUsers / PAGE_SIZE)} page={page} onChange={(_, p) => setPage(p)} />
+            </Box>
+          </Grid>
+          <Grid item xs={12} lg={5}>
+            <Typography variant="h5" sx={{ color: '#2d3748', mb: 3, fontWeight: 800 }}>Latest Activity</Typography>
+            <AuditLogTable logs={logs} />
+          </Grid>
+        </Grid>
       </Box>
-
-      {/* Stats */}
-      <SystemStats />
-
-      {/* Users */}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-      <Panel title="User Management">
-        {loading && <Box sx={{ py: 3, textAlign: 'center' }}><CircularProgress size={24} sx={{ color: 'var(--primary)' }} /></Box>}
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>User</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="center">Failed&nbsp;Logins</TableCell>
-                <TableCell>Locked</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map(u => (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>{u.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{u.email}</Typography>
-                  </TableCell>
-                  <TableCell><Chip label={u.role} color={roleColor[u.role] || 'default'} size="small" /></TableCell>
-                  <TableCell>
-                    <Box sx={{
-                      display: 'inline-block', px: 1, py: 0.25, borderRadius: '5px',
-                      fontSize: '0.7rem', fontWeight: 700,
-                      background: u.is_active ? 'rgba(16,185,129,0.1)' : 'rgba(107,114,128,0.1)',
-                      border: `1px solid ${u.is_active ? 'rgba(16,185,129,0.3)' : 'rgba(107,114,128,0.2)'}`,
-                      color: u.is_active ? '#10b981' : '#6b7280',
-                    }}>
-                      {u.is_active ? 'Active' : 'Inactive'}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Typography variant="body2" sx={{ color: u.failed_login_attempts > 0 ? '#f59e0b' : 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                      {u.failed_login_attempts}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{
-                      display: 'inline-block', px: 1, py: 0.25, borderRadius: '5px',
-                      fontSize: '0.7rem', fontWeight: 700,
-                      background: u.is_locked ? 'rgba(239,68,68,0.1)' : 'transparent',
-                      border: `1px solid ${u.is_locked ? 'rgba(239,68,68,0.3)' : 'transparent'}`,
-                      color: u.is_locked ? '#ef4444' : 'var(--text-muted)',
-                    }}>
-                      {u.is_locked ? 'Locked' : '—'}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', gap: 0.25, justifyContent: 'flex-end' }}>
-                      <Tooltip title="Activate">
-                        <IconButton size="small" onClick={() => act(u.id, 'activate')} disabled={u.is_active}
-                          sx={{ color: '#10b981', '&:hover': { background: 'rgba(16,185,129,0.1)' } }}>
-                          <CheckCircleIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Deactivate">
-                        <IconButton size="small" onClick={() => act(u.id, 'deactivate')} disabled={!u.is_active}
-                          sx={{ color: '#6b7280', '&:hover': { background: 'rgba(107,114,128,0.1)' } }}>
-                          <BlockIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Unlock">
-                        <IconButton size="small" onClick={() => act(u.id, 'unlock')} disabled={!u.is_locked}
-                          sx={{ color: '#6366f1', '&:hover': { background: 'rgba(99,102,241,0.1)' } }}>
-                          <LockOpenIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton size="small" onClick={() => act(u.id, 'delete')}
-                          sx={{ color: '#ef4444', '&:hover': { background: 'rgba(239,68,68,0.1)' } }}>
-                          <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!loading && !users.length && (
-                <TableRow>
-                  <TableCell colSpan={6} sx={{ textAlign: 'center', color: 'var(--text-muted)', py: 5 }}>
-                    No users found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {total > PAGE_SIZE && (
-          <Box sx={{ px: 2.5, py: 1.5, display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)' }}>
-            <Pagination count={Math.ceil(total / PAGE_SIZE)} page={page} onChange={(_, p) => setPage(p)} size="small" />
-          </Box>
-        )}
-      </Panel>
-
-      {/* Audit logs */}
-      <Panel title="Audit Logs">
-        <Box sx={{ px: 2.5, pb: 2.5 }}>
-          <AuditLogTable />
-        </Box>
-      </Panel>
     </Box>
   );
-};
-
-export default AdminDashboard;
+}

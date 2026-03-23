@@ -23,20 +23,20 @@ const theme = createTheme({
     h5: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800 },
     h6: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800 },
   },
-  shape: { borderRadius: 20 },
+  shape: { borderRadius: 12 },
   components: {
     MuiCssBaseline: { styleOverrides: { body: { background: '#f5ede3' } } },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 24, padding: 0, boxShadow: '0 10px 30px rgba(45, 36, 23, 0.06)',
+          borderRadius: 16, padding: 0, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
           border: '1.5px solid rgba(0,0,0,0.03)', backgroundImage: 'none',
         }
       }
     },
     MuiButton: {
       styleOverrides: {
-        root: { textTransform: 'none', fontWeight: 800, borderRadius: 12 },
+        root: { textTransform: 'none', fontWeight: 800, borderRadius: 8 },
         containedPrimary: { background: 'linear-gradient(135deg, #3498db, #2980b9)', boxShadow: '0 6px 16px rgba(52, 152, 219, 0.2)' },
       }
     }

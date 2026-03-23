@@ -11,7 +11,10 @@ const roles = [
 ];
 
 const Navbar = () => {
-  const { user, switchRole } = useContext(AuthContext);
+  const context = useContext(AuthContext);
+  const user = context?.user;
+  const switchRole = context?.switchRole;
+  
   const location = useLocation();
   const currentRole = user?.role || 'Developer';
   const activeRole = roles.find(r => r.id === currentRole) || roles[0];
@@ -47,7 +50,7 @@ const Navbar = () => {
         <Box sx={{
           display: 'flex',
           background: '#f5ede3', // Matching beige background
-          border: '1px solid rgba(0,0,0,0.05)',
+          border: '1px solid rgba(0,0,0,0.1)',
           borderRadius: '12px',
           p: '4px',
           gap: '2px',
@@ -64,7 +67,7 @@ const Navbar = () => {
                     gap: '6px',
                     px: { xs: 1.5, sm: 2 },
                     py: '8px',
-                    borderRadius: '9px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
                     fontWeight: active ? 700 : 600,
                     fontSize: { xs: '0.75rem', sm: '0.8125rem' },
@@ -86,42 +89,6 @@ const Navbar = () => {
             );
           })}
 
-          {/* Demo Mode Button */}
-          <Tooltip title={location.search.includes('demo=high') ? "Exit Demo Mode" : "Activate High-Risk Demo"} arrow>
-            <Box
-              onClick={() => {
-                const isDemo = location.search.includes('demo=high');
-                window.location.href = isDemo ? '/dashboard' : '/dashboard?demo=high';
-              }}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                px: { xs: 1.5, sm: 2 },
-                py: '8px',
-                borderRadius: '9px',
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                whiteSpace: 'nowrap',
-                transition: 'all 200ms cubic-bezier(0.4,0,0.2,1)',
-                background: location.search.includes('demo=high') 
-                  ? 'linear-gradient(135deg, #e74c3c, #c0392b)' 
-                  : 'transparent',
-                color: location.search.includes('demo=high') ? '#fff' : 'rgba(0,0,0,0.5)',
-                boxShadow: location.search.includes('demo=high') ? '0 2px 8px rgba(231, 76, 60, 0.3)' : 'none',
-                border: !location.search.includes('demo=high') ? '1px dashed rgba(231, 76, 60, 0.4)' : 'none',
-                '&:hover': { 
-                  background: location.search.includes('demo=high') ? 'linear-gradient(135deg, #f05242, #d64535)' : 'rgba(231, 76, 60, 0.1)',
-                  color: location.search.includes('demo=high') ? '#fff' : '#e74c3c'
-                },
-                userSelect: 'none',
-              }}
-            >
-              <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>✨</Box>
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Demo</Box>
-            </Box>
-          </Tooltip>
         </Box>
 
       </Toolbar>

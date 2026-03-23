@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "action": "Webook MR !1 predicted",
+    "timestamp": "2026-03-21 13:17:32.547797",
+    "ip_address": null,
+    "role": "System",
+    "status": "success"
+  },
+  {
+    "id": 2,
+    "user_id": 1,
+    "action": "Webhook MR !1 predicted",
+    "timestamp": "2026-03-21 13:22:52.302700",
+    "ip_address": null,
+    "role": "System",
+    "status": "success"
+  },
+  {
+    "id": 3,
+    "user_id": 1,
+    "action": "Webhook MR !1 predicted",
+    "timestamp": "2026-03-21 14:23:25.654528",
+    "ip_address": null,
+    "role": "System",
+    "status": "success"
+  },
+  {
+    "id": 4,
+    "user_id": 1,
+    "action": "Webhook MR !1 predicted",
+    "timestamp": "2026-03-21 14:24:00.969389",
+    "ip_address": null,
+    "role": "System",
+    "status": "success"
+  },
+  {
+    "id": 5,
+    "user_id": 1,
+    "action": "Webhook MR !1 predicted",
+    "timestamp": "2026-03-21 14:24:58.961603",
+    "ip_address": null,
+    "role": "System",
+    "status": "success"
+  },
+  {
+    "id": 6,
+    "user_id": 1,
+    "action": "Webhook MR !1 predicted",
+    "timestamp": "2026-03-21 14:29:46.049036",
+    "ip_address": null,
+    "role": null,
+    "status": "success"
+  }
+]
