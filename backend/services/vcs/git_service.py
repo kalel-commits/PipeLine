@@ -9,6 +9,42 @@ from datetime import datetime
 
 VCS_API_TOKEN = os.getenv("VCS_API_TOKEN", os.getenv("GITLAB_TOKEN"))
 
+
+def _safe_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _extract_push_stats(commits: list, message: str):
+    """Prefer real webhook diff stats; fallback to synthetic only if missing."""
+    additions = 0
+    deletions = 0
+    file_set = set()
+    stats_found = False
+
+    for commit in commits or []:
+        added_files = commit.get("added", []) or []
+        modified_files = commit.get("modified", []) or []
+        removed_files = commit.get("removed", []) or []
+
+        if added_files or modified_files or removed_files:
+            stats_found = True
+            file_set.update(added_files)
+            file_set.update(modified_files)
+            file_set.update(removed_files)
+            additions += len(added_files) + len(modified_files)
+            deletions += len(removed_files)
+
+    if stats_found:
+        return max(additions, 0), max(deletions, 0), max(len(file_set), 1), "real_diff"
+
+    # Final fallback when providers omit file-level stats
+    synthetic_add = max(len(message) // 4, 1)
+    synthetic_del = max(len(message) // 10, 0)
+    return synthetic_add, synthetic_del, 1, "synthetic_fallback"
+
 def process_vcs_event(db: Session, payload: dict):
     """
     Handle generic VCS events (Push, Merge Request, etc.).
@@ -26,6 +62,7 @@ def process_vcs_event(db: Session, payload: dict):
     additions = 0
     deletions = 0
     num_files = 1
+    feature_source = "synthetic_fallback"
 
     if object_kind == "merge_request":
         # ── GitLab Merge Request Mapping ──
@@ -36,8 +73,10 @@ def process_vcs_event(db: Session, payload: dict):
         last_commit = object_attributes.get("last_commit", {})
         commit_sha = last_commit.get("id")
         message = last_commit.get("message", "Merge Request Update")
-        additions = object_attributes.get("total_additions", 15)
-        deletions = object_attributes.get("total_deletions", 5)
+        additions = _safe_int(object_attributes.get("total_additions"), 0)
+        deletions = _safe_int(object_attributes.get("total_deletions"), 0)
+        num_files = _safe_int(object_attributes.get("changes_count"), 1)
+        feature_source = "real_diff" if (additions + deletions) > 0 or num_files > 1 else "synthetic_fallback"
     else:
         # ── Standard Push Mapping ──
         commits = payload.get("commits", [])
@@ -45,14 +84,15 @@ def process_vcs_event(db: Session, payload: dict):
             last_commit = commits[0]
             commit_sha = last_commit.get("id")
             message = last_commit.get("message", "Commit Update")
-            additions = len(message) * 2
-            deletions = len(message) // 2
+            additions, deletions, num_files, feature_source = _extract_push_stats(commits, message)
         else:
             # ── Handle GitLab 'Test' button or Empty Push ──
             commit_sha = payload.get("after") or "test_sha_placeholder"
             message = "GitLab Test Event / Empty Push"
-            additions = 50
-            deletions = 10
+            additions = 6
+            deletions = 1
+            num_files = 1
+            feature_source = "synthetic_fallback"
             print("Processing GitLab Test/Empty Push Event")
         
     # 2. Extract Features (Self-Contained Logic)
@@ -78,11 +118,12 @@ def process_vcs_event(db: Session, payload: dict):
         # ── AUTO-RECOVERY: If no model found, we create a placeholder so the service never 'dies' ──
         print("Warning: No active model in DB. Using default production fallback.")
         prediction = {
-            "risk": 0.5,
-            "risk_category": "Medium",
-            "reason": "Production fallback model active (Awaiting full sync)",
+            "risk": 0.12,
+            "risk_category": "Low",
+            "reason": "Using conservative fallback model until full training sync completes",
             "shap_values": [],
-            "suggestions": []
+            "suggestions": [],
+            "source": "fallback_heuristic",
         }
     else:
         prediction = predict_model(active_model, features)
@@ -115,7 +156,9 @@ def process_vcs_event(db: Session, payload: dict):
         "status": "success",
         "mr_id": mr_id,
         "risk": prediction["risk"],
-        "category": prediction["risk_category"]
+        "category": prediction["risk_category"],
+        "source": prediction.get("source", feature_source),
+        "feature_source": feature_source,
     }
 
 def post_vcs_mr_comment(project_id: int, mr_id: int, prediction: dict):

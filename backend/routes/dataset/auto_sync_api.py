@@ -260,6 +260,7 @@ def train_model(data):
 # ──────────────────────────────────────────────────────────────────
 @router.post("/dataset/auto-sync")
 async def auto_sync(background_tasks: BackgroundTasks, data: List[Any] = Body(...)):
+    print(f"Received auto-sync payload: {data}")  # Debug: log incoming webhook payload
     training_status["status"] = "queued"
     background_tasks.add_task(train_model, data)
     return {"status": "Training started in background"}
@@ -295,7 +296,8 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
                 {"icon": "🌿", "title": "Sustainability Risk", "detail": "A failing build cycle for this diff would waste ~1.4kg of CO2."}
             ],
             "features": {"code_churn": 850, "commit_hour": 3, "has_fix": 1, "num_files": 12},
-            "demo_mode": True
+            "demo_mode": True,
+            "source": "demo_high",
         }
     if demo == "low":
         return {
@@ -312,7 +314,8 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
                 {"icon": "✅", "title": "Safe to Proceed", "detail": "This commit hygiene is excellent. Proceed with automated merging."}
             ],
             "features": {"code_churn": 15, "is_weekend": 0, "has_fix": 0, "num_files": 1},
-            "demo_mode": True
+            "demo_mode": True,
+            "source": "demo_low",
         }
 
     # 1. Fetch active model
@@ -322,7 +325,8 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
         return {
             "risk": 0.0,
             "reason": "Awaiting first model training for real-time analysis",
-            "risk_category": "None"
+            "risk_category": "None",
+            "source": "empty_state",
         }
 
     # 2. Prepare features (Synthetic for Demo, Real for Prod)
@@ -355,7 +359,8 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
                 "suggestions": safe_parse(latest_git.suggestions_json, []),
                 "features": safe_parse(latest_git.features_json, {}),
                 "demo_mode": False,
-                "mr_id": latest_git.mr_id
+                "mr_id": latest_git.mr_id,
+                "source": "vcs_prediction_db",
             }
             
         return {
@@ -364,11 +369,13 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
             "confidence": 1.0,
             "reason": "Awaiting first commit for real-time analysis",
             "top_insight": "System Idle",
-            "demo_mode": False
+            "demo_mode": False,
+            "source": "empty_state",
         }
 
     # 3. Perform inference using unified ML service
     prediction = predict_model(active_model, features)
+    prediction.setdefault("source", "model")
     
     # 4. Enrich response with demo metadata if applicable
     if demo:

@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 from services.audit_log_service import log_action
 from typing import List, Dict, Any, Optional
 import random
-import json
 
 # Columns to always exclude from ML features (identifiers / strings / timestamps)
 _EXCLUDE_COLS = {"label", "pipeline_status", "commit_id", "developer_id", "commit_timestamp"}
@@ -354,13 +353,18 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
         values = [float(v) for v in input_data.values()]
 
     prob = 0.5
+    prediction_source = "model"
     X_scaled = None
     model = None
     try:
         model = joblib.load(ml_model.model_path)
         scaler = joblib.load(ml_model.model_path.replace(".joblib", "_scaler.joblib"))
-        X = np.array([values])
-        X_scaled = scaler.transform(X)
+        if feature_names:
+            X_df = pd.DataFrame([values], columns=feature_names)
+            X_scaled = scaler.transform(X_df)
+        else:
+            X = np.array([values])
+            X_scaled = scaler.transform(X)
 
         # Use predict_proba for continuous probability scores
         if hasattr(model, "predict_proba"):
@@ -373,6 +377,7 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
     except Exception as e:
         # Production-safe fallback: derive a stable heuristic risk score
         print(f"Model/scaler load failed for prediction fallback: {e}")
+        prediction_source = "fallback_heuristic"
         churn = float(input_data.get("code_churn", 0))
         has_fix = float(input_data.get("has_fix", 0))
         hour = float(input_data.get("commit_hour", 12))
@@ -437,6 +442,7 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
         "shap_values": top_risk_factors,
         "suggestions": generate_suggestions(input_data, prob),
         "model_version": ml_model.version,
+        "source": prediction_source,
     }
 
 def compare_models(db: Session, dataset_id: int) -> list:
