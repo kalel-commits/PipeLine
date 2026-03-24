@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Box, Tooltip } from '@mui/material';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
-const DEMO_MODE_ENABLED = process.env.REACT_APP_ENABLE_DEMO_MODE === "true";
+const DEMO_MODE_ENABLED = true; // Enabled permanently for the demo video
 
 const roles = [
   { id: 'Developer', emoji: '🧑‍💻', color: '#1e5f74', bg: 'rgba(30,95,116,' }, // Deep Blue/Teak
