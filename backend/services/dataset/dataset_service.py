@@ -48,6 +48,11 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df["commit_timestamp"] = pd.to_datetime(df["commit_timestamp"], errors="coerce")
     df = df.dropna(subset=["commit_timestamp"])
     # Encode categorical variables
-    for col in ["pipeline_status", "developer_id"]:
-        df[col] = df[col].astype("category").cat.codes
+    # Explicit mapping: Success=0, Failure=1 (Risk)
+    if "pipeline_status" in df.columns:
+        df["pipeline_status"] = df["pipeline_status"].map({"Success": 0, "Failure": 1}).fillna(0).astype(int)
+    
+    if "developer_id" in df.columns:
+        df["developer_id"] = df["developer_id"].astype("category").cat.codes
+    
     return df

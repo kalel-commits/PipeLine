@@ -278,8 +278,6 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
     Predict risk for the latest commit using the active ML model.
     Demo mode: ?demo=high or ?demo=low feeds realistic synthetic features through the real model.
     """
-# 0. Self-Contained Demo Mode (REMOVED: Now uses real predict_model with synthetic features)
-
     # 1. Fetch active model
     active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
     if not active_model:
@@ -293,6 +291,7 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
 
     # 2. Prepare features (Synthetic for Demo, Real for Prod)
     if demo in ["high", "low"]:
+        from services.ml.ml_service import generate_synthetic_features
         features = generate_synthetic_features(demo)
     elif latest_commit_data:
         # ── Extension/Sync Prediction ──
@@ -339,19 +338,6 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
     # 3. Perform inference using unified ML service
     prediction = predict_model(active_model, features)
     
-    # ── ULTIMATE DEMO SHIELD (Fights the 15% ghost) ──
-    if demo == "high":
-        prediction["risk"] = 0.96
-        prediction["risk_category"] = "High"
-    elif demo == "low":
-        prediction["risk"] = 0.08
-        prediction["risk_category"] = "Low"
-    prediction.setdefault("source", "model")
-    
-    # 4. Enrich response with demo metadata if applicable
-    if demo:
-        prediction["demo_mode"] = True
-        
     return prediction
 
     # ── Normal prediction ──
