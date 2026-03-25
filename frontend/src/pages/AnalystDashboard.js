@@ -16,18 +16,13 @@ const COLORS = ['#E86A33', '#4CAF50', '#F59E0B', '#3B82F6'];
 const algoColor = { LogisticRegression: 'primary', RandomForest: 'success', DecisionTree: 'warning' };
 
 const SectionCard = ({ title, children, action }) => (
-  <Box sx={{
-    background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)',
-    borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', mb: 2.5,
-    overflow: 'hidden', transition: 'border-color 200ms',
-    '&:hover': { borderColor: 'rgba(0,0,0,0.1)' },
-  }}>
-    <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#2D3748', letterSpacing: '-0.01em' }}>{title}</Typography>
+  <Card sx={{ mb: 3 }}>
+    <Box sx={{ pb: 2, mb: 3, borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748' }}>{title}</Typography>
       {action}
     </Box>
-    <Box sx={{ p: 3 }}>{children}</Box>
-  </Box>
+    <Box>{children}</Box>
+  </Card>
 );
 
 const AnalystDashboard = () => {
@@ -94,14 +89,14 @@ const AnalystDashboard = () => {
     <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, md: 3 }, py: '48px' }}>
 
       {/* Page header */}
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ width: 40, height: 40, borderRadius: '11px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ScienceIcon sx={{ fontSize: 22, color: '#4CAF50' }} />
+      <Box sx={{ mb: 6, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: '14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ScienceIcon sx={{ fontSize: 24, color: '#4CAF50' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', color: '#2D3748', lineHeight: 1.2 }}>Analytics Lab</Typography>
-            <Typography sx={{ fontSize: '14px', color: '#718096', mt: 0.5 }}>Hyperparameter tuned models with 5-fold cross-validation comparisons</Typography>
+            <Typography variant="h2" sx={{ color: '#2D3748' }}>Analytics Lab</Typography>
+            <Typography variant="subtitle1" sx={{ mt: 0.5 }}>Hyperparameter tuned models with 5-fold cross-validation comparisons</Typography>
           </Box>
         </Box>
 
@@ -152,17 +147,18 @@ const AnalystDashboard = () => {
             }}
           />
           <Tooltip title="Upload any CSV repository export for instant multi-model analysis">
-            <Box 
+            <Button 
               component="label" 
               htmlFor="csv-upload" 
+              variant="contained"
               sx={{ 
-                px: 2, py: 1, borderRadius: '10px', background: '#2D3748', color: '#fff', 
-                fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: '0.2s',
-                '&:hover': { background: '#1A202C' }, display: 'flex', alignItems: 'center', gap: 1
+                bgcolor: '#2D3748', color: '#fff', 
+                '&:hover': { bgcolor: '#1A202C' },
+                display: 'flex', alignItems: 'center', gap: 1
               }}
             >
               UPLOAD CSV
-            </Box>
+            </Button>
           </Tooltip>
         </Box>
       </Box>

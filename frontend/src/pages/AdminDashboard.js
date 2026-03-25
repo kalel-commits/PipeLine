@@ -50,26 +50,26 @@ const AdminDashboard = () => {
   };
 
   const Panel = ({ children, title }) => (
-    <Box sx={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', mb: 2.5, overflow: 'hidden' }}>
+    <Card sx={{ mb: 3 }}>
       {title && (
-        <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5 }}>
-          <Typography className="section-label">{title}</Typography>
+        <Box sx={{ pb: 1, mb: 2.5, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          <Typography variant="overline">{title}</Typography>
         </Box>
       )}
       {children}
-    </Box>
+    </Card>
   );
 
   return (
     <Box className="page-container">
       {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ width: 32, height: 32, borderRadius: '8px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <AdminPanelSettingsIcon sx={{ fontSize: 18, color: '#f59e0b' }} />
+      <Box sx={{ mb: 6, display: 'flex', alignItems: 'center', gap: 2.5 }}>
+        <Box sx={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(245,158,11,0.3)' }}>
+          <AdminPanelSettingsIcon sx={{ fontSize: 20, color: '#f59e0b' }} />
         </Box>
         <Box>
-          <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: '-0.02em' }}>Admin Console</Typography>
-          <Typography variant="body2" color="text.secondary">System overview, user management, and audit logging</Typography>
+          <Typography variant="h2" sx={{ color: '#2d3748' }}>Admin Console</Typography>
+          <Typography variant="subtitle1">System overview, user management, and audit logging</Typography>
         </Box>
       </Box>
 
