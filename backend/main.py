@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from db import engine
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from db import engine, SessionLocal
 from models.base import Base
 import os
 from dotenv import load_dotenv
@@ -200,13 +202,34 @@ def force_demo_prediction(db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "High-risk prediction WITH RICH DATA forced to DB!"}
 
-@app.get("/")
-def root():
-    return {
-        "message": "CI/CD Failure Prediction System API is running.",
-        "status": "Ready",
-        "version": "6.1.0-DIAGNOSTIC"
-    }
+# ── Frontend Build Serving ──
+# This ensures that for a hackathon submission, the backend serves the frontend
+# resulting in a single entry point on port 8000.
+
+front_end_path = os.path.join(os.path.dirname(__file__), "../frontend/build")
+static_path = os.path.join(front_end_path, "static")
+
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    # Skip API routes so they don't get caught
+    if full_path.startswith("api/v1") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
+        
+    # Serve static files from the build root (like manifest.json, logo.png)
+    file_path = os.path.join(front_end_path, full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+        
+    # Standard React Router fallback: serve index.html for everything else
+    index_path = os.path.join(front_end_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+        
+    return {"message": "PipelineAI API is live. Build the frontend to see the dashboard here."}
 
 @app.get("/db-check")
 def db_check(db: Session = Depends(get_db)):

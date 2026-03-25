@@ -281,19 +281,15 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
     """
     # 1. Fetch active model
     active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
-    if not active_model:
-        # Fallback if no model is trained
-        return {
-            "risk": 0.0,
-            "reason": "Awaiting first model training for real-time analysis",
-            "risk_category": "None",
-            "source": "empty_state",
-        }
-
+    
     # 2. Prepare features (Synthetic for Demo, Real for Prod)
     if demo in ["high", "low"]:
         from services.ml.ml_service import generate_synthetic_features
         features = generate_synthetic_features(demo)
+        if not active_model:
+             # If no model in DB, still show the demo logic via the service fallback
+             from services.ml.ml_service import predict_model
+             return predict_model(None, features)
     elif latest_commit_data:
         # ── Extension/Sync Prediction ──
         df_latest = pd.DataFrame([latest_commit_data])
