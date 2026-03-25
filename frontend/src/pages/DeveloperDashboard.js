@@ -15,6 +15,7 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import SchoolIcon from '@mui/icons-material/School';
 import InfoIcon from '@mui/icons-material/Info';
+import mentorAvatar from '../assets/ai-mentor.png';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
@@ -149,16 +150,18 @@ export default function Dashboard() {
                 <Typography variant="h1" sx={{ color: '#2d3748' }}>{risk}%</Typography>
                 <Typography sx={{ fontWeight: 800, color: '#718096' }}>Confidence</Typography>
               </Box>
-              <Box sx={{ 
-                p: 2, borderRadius: '12px', bgcolor: 'rgba(245,158,11,0.08)', 
-                display: 'flex', gap: 1.5, alignItems: 'center',
-                border: '1px solid rgba(245,158,11,0.15)'
-              }}>
-                <InfoIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
-                  {data.reason}
-                </Typography>
-              </Box>
+              <Fade in={true} timeout={800}>
+                <Box sx={{ 
+                  p: 2, borderRadius: '12px', bgcolor: 'rgba(245,158,11,0.08)', 
+                  display: 'flex', gap: 1.5, alignItems: 'center',
+                  border: '1px solid rgba(245,158,11,0.15)'
+                }}>
+                  <InfoIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
+                    {data.reason}
+                  </Typography>
+                </Box>
+              </Fade>
             </Card>
           </Grid>
 
@@ -182,73 +185,84 @@ export default function Dashboard() {
                 </Box>
               </Box>
             </Card>
-          </Grid>
-
-          {/* AI Mentor Card */}
+           {/* AI Mentor Card */}
           <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                <Box sx={{ bgcolor: '#3498db', p: 1.5, borderRadius: 3, display: 'flex' }}>
-                  <SchoolIcon sx={{ color: '#fff' }} />
+            <Grow in={true} timeout={1000}>
+              <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,99,151,0.1)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                  <Avatar src={mentorAvatar} sx={{ width: 48, height: 48, border: '2px solid #006397' }} />
+                  <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>AI Mentor</Typography>
                 </Box>
-                <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748' }}>AI Mentor</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {[
-                  { title: "Commit Strategy", detail: "Consider splitting large commits to reduce risk." },
-                  { title: "Timing Optimization", detail: "Schedule critical changes during active review hours." },
-                  { title: "Safety Net", detail: "Add tests for high-impact changes." }
-                ].map((s, idx) => (
-                  <Box key={idx} sx={{ bgcolor: '#fff', p: 2, borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                    <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
-                      <CalendarMonthIcon sx={{ color: '#7C3AED', fontSize: 20 }} />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#2d3748' }}>{s.title}</Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ color: '#718096', lineHeight: 1.4 }}>
-                      {s.detail}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {data.suggestions?.map((s, idx) => (
+                    <Fade key={idx} in={true} timeout={1200 + (idx * 200)}>
+                      <Box sx={{ bgcolor: '#fff', p: 2, borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                        <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
+                          <Typography sx={{ fontSize: 20 }}>{s.icon}</Typography>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#2d3748' }}>{s.title}</Typography>
+                        </Box>
+                        <Typography variant="body2" sx={{ color: '#718096', lineHeight: 1.4 }}>
+                          {s.detail}
+                        </Typography>
+                      </Box>
+                    </Fade>
+                  ))}
+                  {!data.suggestions?.length && (
+                    <Typography variant="body2" sx={{ color: '#718096', p: 2, textAlign: 'center', fontStyle: 'italic' }}>
+                      Gathering architectural signals...
                     </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Card>
+                  )}
+                </Box>
+              </Card>
+            </Grow>
           </Grid>
 
           {/* SHAP Chart Card */}
           <Grid item xs={12} md={8}>
-            <Card sx={{ height: '100%' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-                <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748' }}>
-                  SHAP Feature Importance
-                </Typography>
-                <InfoIcon sx={{ color: '#2d3748', opacity: 0.6 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                   {data.shap_values?.map((sv, idx) => {
-                     const labelMap = {
-                       'NUM_FILES': 'Files Changed',
-                       'MSG_LENGTH': 'Commit Message Length',
-                       'HAS_FIX': 'Hotfix Indicator',
-                       'IS_WEEKEND': 'Weekend Activity'
-                     };
-                     const displayName = labelMap[sv.feature] || sv.feature.replace('_', ' ');
-                     return (
-                       <Box key={idx}>
-                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                           <Typography variant="overline" sx={{ color: '#2d3748' }}>{displayName}</Typography>
-                           <Typography variant="caption" sx={{ fontWeight: 900, color: sv.shap_value > 0 ? '#1e5f74' : '#7C3AED' }}>
-                             {sv.shap_value > 0 ? '+' : ''}{sv.shap_value.toFixed(2)}
-                           </Typography>
+            <Grow in={true} timeout={1000}>
+              <Card sx={{ height: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+                  <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>
+                    SHAP Feature Impact
+                  </Typography>
+                  <Tooltip title="SHAP values explain how much each feature contributed to the risk score.">
+                    <InfoIcon sx={{ color: '#2d3748', opacity: 0.6 }} />
+                  </Tooltip>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                     {data.shap_values?.map((sv, idx) => {
+                       const labelMap = {
+                         'code_churn': 'Code Churn (Lines Changed)',
+                         'num_files': 'Files Impacted',
+                         'msg_length': 'Commit Message Length',
+                         'has_fix': 'Urgent Fix Indicators',
+                         'is_weekend': 'Off-Hours Activity',
+                         'commit_hour': 'Time of Day',
+                         'change_ratio': 'Deletions/Additions Ratio'
+                       };
+                       const displayName = labelMap[sv.feature] || sv.feature.replace('_', ' ');
+                       const isHighRisk = sv.shap_value > 0;
+                       return (
+                         <Box key={idx}>
+                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                             <Typography variant="overline" sx={{ color: '#2d3748', fontWeight: 700 }}>{displayName}</Typography>
+                             <Typography variant="caption" sx={{ fontWeight: 900, color: isHighRisk ? '#ba1a1a' : '#006397' }}>
+                               {isHighRisk ? '+' : ''}{sv.shap_value.toFixed(2)}
+                             </Typography>
+                           </Box>
+                           <LinearProgress variant="determinate" value={Math.min(Math.abs(sv.shap_value) * 100, 100)} 
+                            sx={{ 
+                              height: 10, borderRadius: 5, bgcolor: '#f1f5f9',
+                              '& .MuiLinearProgress-bar': { bgcolor: isHighRisk ? '#ba1a1a' : '#006397', borderRadius: 5 }
+                            }} />
                          </Box>
-                         <LinearProgress variant="determinate" value={Math.min(Math.abs(sv.shap_value) * 100, 100)} 
-                          sx={{ 
-                            height: 12, borderRadius: 6, bgcolor: '#f1f5f9',
-                            '& .MuiLinearProgress-bar': { bgcolor: sv.shap_value > 0 ? '#1e5f74' : '#7C3AED', borderRadius: 6 }
-                          }} />
-                       </Box>
-                     );
-                   })}
-              </Box>
-            </Card>
+                       );
+                     })}
+                </Box>
+              </Card>
+            </Grow>
+          </Grid>
+
           </Grid>
 
           {/* Small Feature Cards & System Health integrated into Grid */}

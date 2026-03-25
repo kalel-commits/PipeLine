@@ -9,7 +9,7 @@ import DashboardPage from './pages/DashboardPage';
 const theme = createTheme({
   palette: {
     mode: 'light',
-    primary: { main: '#3498db', contrastText: '#fff' }, 
+    primary: { main: '#006397', contrastText: '#fff' }, 
     secondary: { main: '#2d3748', contrastText: '#fff' }, 
     error: { main: '#f26f60' },
     warning: { main: '#F59E0B' },

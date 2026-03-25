@@ -213,43 +213,84 @@ def generate_suggestions(input_data: dict, risk: float) -> list:
     
     churn = input_data.get("code_churn", 0)
     files = input_data.get("num_files", 1)
+    ratio = input_data.get("change_ratio", 0.5)
+    has_fix = input_data.get("has_fix", 0)
+    hour = input_data.get("commit_hour", 12)
     
-    if churn > 150:
+    # 1. Complexity & Blast Radius
+    if churn > 250:
         suggestions.append({
             "icon": "🧠",
-            "title": "Complexity Alert",
-            "detail": f"This commit has a high change density ({int(churn)} lines). Large diffs are 3x more likely to harbor regressions. Consider breaking this into smaller, atomic pull requests."
+            "title": "Architectural Complexity",
+            "detail": f"This change impact is significant ({int(churn)} lines). High churn correlates with a 45% increase in regression risk. Consider a dedicated design review."
         })
-        
-    if input_data.get("commit_hour", 12) >= 22 or input_data.get("commit_hour", 12) <= 4:
+    elif churn > 100:
         suggestions.append({
-            "icon": "🌙",
-            "title": "Fatigue Monitoring",
-            "detail": "Late-night changes are associated with higher error rates. Ensure a peer review is conducted during daytime hours for this MR."
+            "icon": "💡",
+            "title": "Refactoring Opportunity",
+            "detail": "Medium churn detected. Ensure this change focuses on one responsibility to maintain code health."
         })
         
-    if risk > 0.65 and files > 5:
+    if files > 7:
         suggestions.append({
             "icon": "📂",
             "title": "Wide Blast Radius",
             "detail": f"Changing {int(files)} files simultaneously increases coupling risk. Verify that cross-module dependencies are properly tested."
         })
 
+    # 2. Timing & Human Factors
+    if hour >= 22 or hour <= 4:
+        suggestions.append({
+            "icon": "🌙",
+            "title": "Fatigue Monitoring",
+            "detail": "Late-night changes have a 2x higher error rate. Recommend a fresh-eyes review during daytime hours before merging."
+        })
+    elif hour >= 18:
+        suggestions.append({
+            "icon": "☕",
+            "title": "End-of-Day Rush",
+            "detail": "Evening commits can be rushed. Double-check that all automated tests were run locally."
+        })
+
+    # 3. Content & Intent
+    if has_fix == 1:
+        if risk > 0.6:
+            suggestions.append({
+                "icon": "🚑",
+                "title": "High-Risk Hotfix",
+                "detail": "Emergency fixes often introduce secondary bugs. Perform a manual 'happy path' run-through of the affected feature."
+            })
+        else:
+            suggestions.append({
+                "icon": "🛠️",
+                "title": "Clean Patch",
+                "detail": "This fix looks focused. Ensure the corresponding issue ID is linked in the PR description."
+            })
+
+    if ratio > 0.8:
+        suggestions.append({
+            "icon": "🗑️",
+            "title": "Heavy Deletion",
+            "detail": "Removing large amounts of code can break subtle dependencies. Verify that no 'dark code' being removed is actually used by legacy modules."
+        })
+
+    # 4. Default/Positive Reinforcement
     if not suggestions:
         if risk < 0.3:
             suggestions.append({
                 "icon": "✅",
-                "title": "Great commit hygiene!",
-                "detail": "All signals look healthy. Keep up the disciplined workflow!",
+                "title": "Clean Execution",
+                "detail": "All predictive signals are green. Your commit hygiene is excellent!",
             })
         else:
             suggestions.append({
-                "icon": "💡",
+                "icon": "📝",
                 "title": "Best Practice",
-                "detail": "Maintain small, focused changes to keep build stability high and review time low.",
+                "detail": "Keep commits atomic and message-focused to minimize build-breaking risks.",
             })
             
-    return suggestions
+    # Always return a max of 3 most relevant suggestions
+    return suggestions[:3]
 
 def extract_features(df: pd.DataFrame) -> pd.DataFrame:
     """

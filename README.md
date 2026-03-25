@@ -2,49 +2,46 @@
   <img src="frontend/src/assets/logo.png" alt="PipelineAI Logo" width="200" />
 </p>
 
-# 🚀 PipelineAI: Real-Time Predictive CI/CD Intelligence
+# 🚀 PipelineAI: The Architectural Forecaster for CI/CD
 
-**Predict failures, don't just observe them.**
+**Predict failures locally, before they ever reach the cloud.**
 
-PipelineAI is a predictive developer-experience layer designed for modern software engineering teams. It bridges the gap between code commits and pipeline execution by identifying high-risk changes *before* they are pushed, saving developer time, cloud compute costs, and energy.
-
----
-
-### 🔥 Core Features
-*   **Provider-Agnostic Core**: Built-in support for multiple Version Control Systems (VCS) including **GitLab**, **GitHub**, and **Bitbucket**.
-*   **Real-Time Risk Gauge**: Instantly see the probability of build failure based on 7 behavioral signals.
-*   **Explainable AI (XAI)**: Integrated **SHAP** feature importance charts that show *why* the AI is predicting a failure (e.g., Code Churn, Midnight Factor).
-*   **AI Mentor**: Sophisticated, Claude-powered refactoring advice to mitigate risks.
-*   **🌱 Sustainability Tracker**: Real-time monitoring of CO₂ emissions prevented by avoiding failed cycles.
-*   **Enterprise Dashboard**: Centralized monitoring of system health, high-risk trends, and audit logs.
+PipelineAI is a zero-config, predictive developer-experience layer designed for modern engineering teams. It analyzes code changes in real-time within your IDE to identify high-risk commits, saving developer focus, reducing CI/CD costs, and lowering the carbon footprint of software delivery.
 
 ---
 
-### 💻 Local Setup
-1. **Clone & Install**:
+### 🌟 Why PipelineAI?
+*   **Zero-Config Local Intel**: Installs in seconds. Connects automatically to your local working directory.
+*   **Explainable Risk (XAI)**: Don't just see a score—see *why*. Integrated **SHAP** charts reveal the exact features (churn, timing, complexity) driving every prediction.
+*   **AI Mentor**: Receives context-aware architectural advice powered by sophisticated heuristics (and LLM-ready) to remediate risks instantly.
+*   **VCS Native**: Automated risk reporting directly into **GitLab/GitHub** Merge Request comments.
+*   **Premium UX**: A "Command Center" dashboard designed for high-performance engineering teams.
+
+---
+
+### 🛠️ Quick Start
+1. **Clone & Setup**:
    ```bash
    python -m pip install -r backend/requirements.txt
    cd frontend && npm install
    ```
-2. **Launch Developer Mode**:
-   - Backend: `python backend/main.py` (Port 8000)
-   - Frontend: `npm start` (Port 3000)
-3. **Magic Demo Toggle**: Navigate to `http://localhost:3000/dashboard?demo=high` to see the high-risk predictive model in action with full mock data.
+2. **Start the Engine**:
+   - Backend: `python backend/main.py`
+   - Frontend: `npm start`
+3. **Experience the Magic**: Navigate to `http://localhost:3000/dashboard?demo=high` to see a high-risk prediction lifecycle, complete with SHAP values and AI Mentor suggestions.
 
 ---
 
 ### 🏗️ Technology Stack
-*   **Intelligence**: Scikit-Learn (Random Forest), SHAP (XAI), Anthropic Claude
-*   **Architecture**: FastAPI (Python), Create React App (Material-UI)
-*   **Deployment**: Support for Docker, Render, Vercel, and Google Cloud Run.
-*   **Data Science**: Pandas, Joblib, SQLAlchemy (SQLite/Postgres)
+*   **Intelligence**: Scikit-Learn (Random Forest/Ensemble), SHAP (XAI), Heuristic Intelligence
+*   **Backend**: FastAPI, SQLAlchemy, Pydantic, Joblib
+*   **Frontend**: React, Material UI (Premium Theme), Tailwind CSS (Landing)
+*   **Monitoring**: Real-time event auditing and role-based access control.
 
 ---
 
-### 🛡️ Security & Compliance
-*   **RBAC**: Role-Based Access Control for Developer, Analyst, and Admin tiers.
-*   **Audit Logging**: Every prediction and system event is tracked for compliance.
-*   **Data Privacy**: All behavioral data is processed with encryption at rest.
+### 🛡️ Enterprise Ready
+PipelineAI is built with security at its core, featuring comprehensive **Role-Based Access Control (RBAC)** and **Audit Logging** to ensure compliance in even the most regulated environments.
 
 ---
-**Build Smarter. Push Greener. This is PipelineAI.**
+**Build Smarter. Push Greener. Ship with Certainty.**

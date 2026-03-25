@@ -12,6 +12,7 @@ from db import SessionLocal
 from models.ml.ml_model import MLModel
 from models.vcs_prediction import VCSPrediction
 from services.ml.ml_service import predict_model, generate_synthetic_features, extract_features
+from services.audit_log_service import log_action
 
 router = APIRouter()
 
@@ -337,6 +338,16 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
 
     # 3. Perform inference using unified ML service
     prediction = predict_model(active_model, features)
+    
+    # Audit Log: Record prediction event
+    log_action(
+        db, 
+        0, # System/Anonymous
+        f"vcs_prediction_viewed:{'demo' if demo else 'realtime'}", 
+        None, 
+        "Developer", 
+        "success"
+    )
     
     return prediction
 

@@ -49,6 +49,7 @@ def set_active(model_id: int, token_data=Depends(require_role("Developer", "Anal
     db.query(MLModel).filter(MLModel.dataset_id == ml_model.dataset_id).update({MLModel.is_active: False}, synchronize_session=False)
     ml_model.is_active = True
     db.commit()
+    log_action(db, token_data.user_id, f"set_active_model:{model_id}", None, token_data.role, "success")
     return {"status": "success", "active_model_id": ml_model.id, "algorithm": ml_model.algorithm}
 
 @router.get("/{model_id}/evaluate")
@@ -58,8 +59,10 @@ def evaluate(model_id: int, token_data=Depends(require_role("Developer", "Analys
         raise HTTPException(status_code=404, detail="Model not found.")
     try:
         metrics = evaluate_model(db, ml_model)
+        log_action(db, token_data.user_id, f"evaluate_model:{model_id}", None, token_data.role, "success")
         return {"model_id": ml_model.id, "metrics": metrics}
     except Exception as e:
+        log_action(db, token_data.user_id, f"evaluate_failed:{model_id}", None, token_data.role, "failure")
         raise HTTPException(status_code=400, detail=f"Evaluation failed: {str(e)}")
 
 @router.post("/{model_id}/predict")
@@ -69,8 +72,10 @@ def predict(model_id: int, input_data: Dict[str, Any], token_data=Depends(requir
         raise HTTPException(status_code=404, detail="Model not found.")
     try:
         result = predict_model(ml_model, input_data)
+        log_action(db, token_data.user_id, f"manual_predict:{model_id}", None, token_data.role, "success")
         return result
     except Exception as e:
+        log_action(db, token_data.user_id, f"manual_predict_failed:{model_id}", None, token_data.role, "failure")
         raise HTTPException(status_code=400, detail=f"Prediction failed: {str(e)}")
 
 @router.get("/compare")
