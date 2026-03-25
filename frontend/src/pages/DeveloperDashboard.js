@@ -15,6 +15,7 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import SchoolIcon from '@mui/icons-material/School';
 import InfoIcon from '@mui/icons-material/Info';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import mentorAvatar from '../assets/ai-mentor.png';
 function SidebarItem({ icon, label, active = false }) {
   return (
