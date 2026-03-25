@@ -16,10 +16,29 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import SchoolIcon from '@mui/icons-material/School';
 import InfoIcon from '@mui/icons-material/Info';
 import mentorAvatar from '../assets/ai-mentor.png';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-
 // Using shared api service from ../services/api
+
+function SidebarItem({ icon, label, active = false }) {
+  return (
+    <Button
+      fullWidth
+      startIcon={icon}
+      sx={{
+        justifyContent: 'flex-start',
+        py: 1.5, px: 3,
+        borderRadius: '12px',
+        color: active ? '#fff' : '#718096',
+        bgcolor: active ? '#006397' : 'transparent',
+        fontWeight: 800,
+        fontSize: '0.75rem',
+        '&:hover': { bgcolor: active ? '#005a8a' : 'rgba(0,99,151,0.05)' },
+        transition: 'all 0.2s'
+      }}
+    >
+      {label}
+    </Button>
+  );
+}
 
 export default function Dashboard() {
   const location = useLocation();
@@ -56,7 +75,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3' }}>
-        <CircularProgress sx={{ color: '#3498db' }} />
+        <CircularProgress sx={{ color: '#006397' }} />
       </Box>
     );
   }
@@ -68,7 +87,7 @@ export default function Dashboard() {
         <Typography variant="body1" sx={{ mb: 3, maxWidth: 500 }}>
           The backend service might be starting up. This can take up to 60 seconds on the first load.
         </Typography>
-        <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#3498db', '&:hover': { bgcolor: '#2980b9' } }}>
+        <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#006397', '&:hover': { bgcolor: '#005a8a' } }}>
           Retry Connection
         </Button>
       </Box>
@@ -87,36 +106,39 @@ export default function Dashboard() {
         bgcolor: 'transparent', flexShrink: 0
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <AutoGraphIcon sx={{ color: '#3498db', fontSize: 32 }} />
+          <AutoGraphIcon sx={{ color: '#006397', fontSize: 32 }} />
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#2d3748' }}>
             PipelineAI
           </Typography>
         </Box>
 
         <Box sx={{
-          p: 2, borderRadius: 4, bgcolor: '#ffffff', shadow: '0 4px 12px rgba(0,0,0,0.03)',
+          p: 2, borderRadius: 4, bgcolor: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
           display: 'flex', gap: 2, alignItems: 'center'
         }}>
-          <Avatar sx={{ bgcolor: '#3498db', width: 32, height: 32 }}>
+          <Avatar sx={{ bgcolor: '#006397', width: 32, height: 32 }}>
             <AddIcon sx={{ fontSize: 20 }} />
           </Avatar>
           <Box>
             <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: '#718096' }}>
-              Command
+              Mode
             </Typography>
             <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#2d3748' }}>
-              Center
+              Architectural
             </Typography>
           </Box>
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
           <SidebarItem icon={<DashboardIcon />} label="DASHBOARD" active />
+          <SidebarItem icon={<TimelineIcon />} label="PREDICTION LAB" />
+          <SidebarItem icon={<PsychologyIcon />} label="AI AUDIT" />
+          <SidebarItem icon={<SchoolIcon />} label="ACADEMY" />
         </Box>
 
         <Box sx={{ mt: 'auto' }}>
           <Button variant="contained" fullWidth startIcon={<AddIcon />}
-            sx={{ py: 1.5, background: '#3498db', boxShadow: '0 8px 20px rgba(52,152,219,0.3)' }}>
+            sx={{ py: 1.5, background: '#006397', boxShadow: '0 8px 20px rgba(0,99,151,0.3)', '&:hover': { background: '#005a8a' } }}>
             New Analysis
           </Button>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 4 }}>
@@ -131,7 +153,7 @@ export default function Dashboard() {
       </Box>
 
       {/* ── Main Content ── */}
-      <Box sx={{ flex: 1, p: 6, overflowY: 'auto' }}>
+      <Box sx={{ flex: 1, p: { xs: 2, md: 6 }, overflowY: 'auto', minWidth: 0 }}>
         <Box sx={{ mb: 6 }}>
           <Typography variant="h3" sx={{ color: '#2d3748' }}>PipelineAI Command Center</Typography>
           <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>Real-time predictive CI/CD intelligence.</Typography>
@@ -140,28 +162,27 @@ export default function Dashboard() {
         <Grid container spacing={4}>
           {/* Risk Probability Card */}
           <Grid item xs={12} md={8}>
-            <Card sx={{ position: 'relative', overflow: 'hidden' }}>
+            <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
                 <Typography variant="overline">Risk Probability</Typography>
                 <Chip label={`${category} Risk`} size="small" 
                    sx={{ fontWeight: 800, background: '#fef3c7', color: '#f59e0b', fontSize: '0.65rem', borderRadius: '4px' }} />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 2 }}>
-                <Typography variant="h1" sx={{ color: '#2d3748' }}>{risk}%</Typography>
+                <Typography variant="h1" sx={{ color: '#2d3748', fontSize: { xs: '3rem', md: '5rem' } }}>{risk}%</Typography>
                 <Typography sx={{ fontWeight: 800, color: '#718096' }}>Confidence</Typography>
               </Box>
-              <Fade in={true} timeout={800}>
-                <Box sx={{ 
-                  p: 2, borderRadius: '12px', bgcolor: 'rgba(245,158,11,0.08)', 
-                  display: 'flex', gap: 1.5, alignItems: 'center',
-                  border: '1px solid rgba(245,158,11,0.15)'
-                }}>
-                  <InfoIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
-                    {data.reason}
-                  </Typography>
-                </Box>
-              </Fade>
+              <Box sx={{ 
+                p: 2, borderRadius: '12px', bgcolor: 'rgba(245,158,11,0.08)', 
+                display: 'flex', gap: 1.5, alignItems: 'center',
+                border: '1px solid rgba(245,158,11,0.15)',
+                mt: 'auto' // Push to bottom
+              }}>
+                <InfoIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
+                  {data.reason}
+                </Typography>
+              </Box>
             </Card>
           </Grid>
 
@@ -185,84 +206,77 @@ export default function Dashboard() {
                 </Box>
               </Box>
             </Card>
-           {/* AI Mentor Card */}
+          </Grid>
+          {/* AI Mentor Card */}
           <Grid item xs={12} md={4}>
-            <Grow in={true} timeout={1000}>
-              <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,99,151,0.1)' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                  <Avatar src={mentorAvatar} sx={{ width: 48, height: 48, border: '2px solid #006397' }} />
-                  <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>AI Mentor</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {data.suggestions?.map((s, idx) => (
-                    <Fade key={idx} in={true} timeout={1200 + (idx * 200)}>
-                      <Box sx={{ bgcolor: '#fff', p: 2, borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                        <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
-                          <Typography sx={{ fontSize: 20 }}>{s.icon}</Typography>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#2d3748' }}>{s.title}</Typography>
-                        </Box>
-                        <Typography variant="body2" sx={{ color: '#718096', lineHeight: 1.4 }}>
-                          {s.detail}
-                        </Typography>
+            <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,99,151,0.1)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                <Avatar src={mentorAvatar} sx={{ width: 48, height: 48, border: '2px solid #006397' }} />
+                <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>AI Mentor</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {data.suggestions?.map((s, idx) => (
+                    <Box key={idx} sx={{ bgcolor: '#fff', p: 2, borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                      <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
+                        <Typography sx={{ fontSize: 20 }}>{s.icon}</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#2d3748' }}>{s.title}</Typography>
                       </Box>
-                    </Fade>
-                  ))}
-                  {!data.suggestions?.length && (
-                    <Typography variant="body2" sx={{ color: '#718096', p: 2, textAlign: 'center', fontStyle: 'italic' }}>
-                      Gathering architectural signals...
-                    </Typography>
-                  )}
-                </Box>
-              </Card>
-            </Grow>
+                      <Typography variant="body2" sx={{ color: '#718096', lineHeight: 1.4 }}>
+                        {s.detail}
+                      </Typography>
+                    </Box>
+                ))}
+                {!data.suggestions?.length && (
+                  <Typography variant="body2" sx={{ color: '#718096', p: 2, textAlign: 'center', fontStyle: 'italic' }}>
+                    Gathering architectural signals...
+                  </Typography>
+                )}
+              </Box>
+            </Card>
           </Grid>
 
           {/* SHAP Chart Card */}
           <Grid item xs={12} md={8}>
-            <Grow in={true} timeout={1000}>
-              <Card sx={{ height: '100%' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-                  <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>
-                    SHAP Feature Impact
-                  </Typography>
-                  <Tooltip title="SHAP values explain how much each feature contributed to the risk score.">
-                    <InfoIcon sx={{ color: '#2d3748', opacity: 0.6 }} />
-                  </Tooltip>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                     {data.shap_values?.map((sv, idx) => {
-                       const labelMap = {
-                         'code_churn': 'Code Churn (Lines Changed)',
-                         'num_files': 'Files Impacted',
-                         'msg_length': 'Commit Message Length',
-                         'has_fix': 'Urgent Fix Indicators',
-                         'is_weekend': 'Off-Hours Activity',
-                         'commit_hour': 'Time of Day',
-                         'change_ratio': 'Deletions/Additions Ratio'
-                       };
-                       const displayName = labelMap[sv.feature] || sv.feature.replace('_', ' ');
-                       const isHighRisk = sv.shap_value > 0;
-                       return (
-                         <Box key={idx}>
-                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                             <Typography variant="overline" sx={{ color: '#2d3748', fontWeight: 700 }}>{displayName}</Typography>
-                             <Typography variant="caption" sx={{ fontWeight: 900, color: isHighRisk ? '#ba1a1a' : '#006397' }}>
-                               {isHighRisk ? '+' : ''}{sv.shap_value.toFixed(2)}
-                             </Typography>
-                           </Box>
-                           <LinearProgress variant="determinate" value={Math.min(Math.abs(sv.shap_value) * 100, 100)} 
-                            sx={{ 
-                              height: 10, borderRadius: 5, bgcolor: '#f1f5f9',
-                              '& .MuiLinearProgress-bar': { bgcolor: isHighRisk ? '#ba1a1a' : '#006397', borderRadius: 5 }
-                            }} />
+            <Card sx={{ height: '100%' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+                <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>
+                  SHAP Feature Impact
+                </Typography>
+                <Tooltip title="SHAP values explain how much each feature contributed to the risk score.">
+                  <InfoIcon sx={{ color: '#2d3748', opacity: 0.6 }} />
+                </Tooltip>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                   {data.shap_values?.map((sv, idx) => {
+                     const labelMap = {
+                       'code_churn': 'Code Churn (Lines Changed)',
+                       'num_files': 'Files Impacted',
+                       'msg_length': 'Commit Message Length',
+                       'has_fix': 'Urgent Fix Indicators',
+                       'is_weekend': 'Off-Hours Activity',
+                       'commit_hour': 'Time of Day',
+                       'change_ratio': 'Deletions/Additions Ratio'
+                     };
+                     const displayName = labelMap[sv.feature] || sv.feature.replace('_', ' ');
+                     const isHighRisk = sv.shap_value > 0;
+                     return (
+                       <Box key={idx}>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                           <Typography variant="overline" sx={{ color: '#2d3748', fontWeight: 700 }}>{displayName}</Typography>
+                           <Typography variant="caption" sx={{ fontWeight: 900, color: isHighRisk ? '#ba1a1a' : '#006397' }}>
+                             {isHighRisk ? '+' : ''}{sv.shap_value.toFixed(2)}
+                           </Typography>
                          </Box>
-                       );
-                     })}
-                </Box>
-              </Card>
-            </Grow>
-          </Grid>
-
+                         <LinearProgress variant="determinate" value={Math.min(Math.abs(sv.shap_value) * 100, 100)} 
+                          sx={{ 
+                            height: 10, borderRadius: 5, bgcolor: '#f1f5f9',
+                            '& .MuiLinearProgress-bar': { bgcolor: isHighRisk ? '#ba1a1a' : '#006397', borderRadius: 5 }
+                          }} />
+                       </Box>
+                     );
+                   })}
+              </Box>
+            </Card>
           </Grid>
 
           {/* Small Feature Cards & System Health integrated into Grid */}
@@ -280,10 +294,12 @@ export default function Dashboard() {
           ))}
           
           {/* System Health Card */}
-          <Grid item xs={12} md={12}>
+          <Grid item xs={12}>
             <Card sx={{ 
               bgcolor: '#2d2417', color: '#fff',
-              display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
+              display: 'flex', flexDirection: { xs: 'column', md: 'row' }, 
+              alignItems: 'center', justifyContent: 'space-between',
+              gap: 3
             }}>
                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 12px rgba(16,185,129,0.5)' }} />
@@ -292,7 +308,7 @@ export default function Dashboard() {
                     <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.6)' }}>System Integrity Verified</Typography>
                   </Box>
                </Box>
-               <Box sx={{ textAlign: 'right' }}>
+               <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
                  <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block' }}>
                     Last Retrain
                  </Typography>
@@ -315,23 +331,4 @@ export default function Dashboard() {
   );
 }
 
-function SidebarItem({ icon, label, active = false }) {
-  return (
-    <Box sx={{
-      display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 3,
-      cursor: 'pointer', transition: '0.2s',
-      bgcolor: active ? '#ffffff' : 'transparent',
-      boxShadow: active ? '0 4px 12px rgba(0,0,0,0.03)' : 'none',
-      '&:hover': { bgcolor: active ? '#ffffff' : 'rgba(0,0,0,0.02)' }
-    }}>
-      <Box sx={{ color: active ? '#3498db' : '#718096', opacity: active ? 1 : 0.6 }}>{icon}</Box>
-      <Typography sx={{
-        fontSize: '0.75rem', fontWeight: 800,
-        color: active ? '#2d3748' : '#718096',
-        opacity: active ? 1 : 0.6
-      }}>
-        {label}
-      </Typography>
-    </Box>
-  );
-}
+
