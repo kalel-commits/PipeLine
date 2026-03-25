@@ -17,6 +17,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import InfoIcon from '@mui/icons-material/Info';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import mentorAvatar from '../assets/ai-mentor.png';
+
 function SidebarItem({ icon, label, active = false }) {
   return (
     <Button
@@ -82,13 +83,33 @@ export default function Dashboard() {
   if (error || !data) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', p: 3, textAlign: 'center' }}>
-        <Typography variant="h5" color="error" gutterBottom>⚠️ Service Offline</Typography>
-        <Typography variant="body1" sx={{ mb: 3, maxWidth: 400, color: '#64748b' }}>
-          The predictive engine is currently unavailable. Please verify the backend service is running.
+        <Typography variant="h5" color="error" gutterBottom>⚠️ Dashboard Connectivity Break</Typography>
+        <Typography variant="body1" sx={{ mb: 1, maxWidth: 500 }}>
+          The Frontend (Vercel) cannot reach the Backend (Render).
         </Typography>
-        <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#006397', '&:hover': { bgcolor: '#005a8a' }, borderRadius: '12px', px: 4 }}>
-          Retry Connection
-        </Button>
+        
+        <Box sx={{ p: 3, bgcolor: '#f1f5f9', borderRadius: 4, mb: 3, border: '1px solid #e2e8f0', width: '100%', maxWidth: 500 }}>
+          <Typography variant="caption" sx={{ display: 'block', mb: 1, color: '#64748b', fontWeight: 800 }}>CONNECTION DETECTIVE (DEBUG INFO)</Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1, textAlign: 'left', wordBreak: 'break-all' }}>
+            <strong>Attempting to reach:</strong> {api.defaults.baseURL}
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#ef4444', textAlign: 'left' }}>
+            <strong>Status:</strong> {error || "No response. The backend might be asleep or the URL is wrong."}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#006397', borderRadius: '12px', px: 4, '&:hover': { bgcolor: '#004a71' } }}>
+            Retry Now
+          </Button>
+          <Button variant="outlined" onClick={() => window.open(`${api.defaults.baseURL}/docs`, '_blank')} sx={{ borderColor: '#006397', color: '#006397', borderRadius: '12px', px: 4 }}>
+            Open Backend API
+          </Button>
+        </Box>
+        
+        <Typography variant="caption" sx={{ mt: 4, color: '#94a3b8', maxWidth: 450 }}>
+          TIP: If the "Attempting to reach" URL is localhost, you must set REACT_APP_API_URL in your Vercel Project Settings to your Render URL.
+        </Typography>
       </Box>
     );
   }
@@ -306,5 +327,3 @@ export default function Dashboard() {
     </Box>
   );
 }
-
-
