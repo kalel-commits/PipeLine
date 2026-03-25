@@ -43,7 +43,7 @@ def list_users(
     size: int = Query(10, ge=1, le=100),
     demo: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    # Optional dependency: Only require Admin if NOT in demo mode
+    token_data=Depends(require_role("Admin")),
     request: Request = None 
 ):
     if demo == "high":
@@ -135,7 +135,7 @@ def get_audit_logs(
     end: Optional[str] = Query(None),
     demo: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    # Optional dependency: Only require Admin if NOT in demo mode
+    token_data=Depends(require_role("Admin")),
     request: Request = None
 ):
     if demo == "high":
@@ -290,7 +290,7 @@ def export_audit_logs(
 # --- System Stats ---
 
 @router.get("/system-stats")
-def system_stats(demo: Optional[str] = Query(None), db: Session = Depends(get_db), request: Request = None):
+def system_stats(demo: Optional[str] = Query(None), db: Session = Depends(get_db), token_data=Depends(require_role("Admin")), request: Request = None):
     if demo == "high":
         return {
             "total_users": 1240,

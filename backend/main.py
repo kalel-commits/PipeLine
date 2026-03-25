@@ -11,6 +11,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 # Import all models so they register on the shared Base metadata
 import models.vcs_prediction
 from services.vcs.git_service import process_vcs_event
+from services.audit_log_service import log_action
 from fastapi import Request, Depends
 from sqlalchemy.orm import Session
 from db import SessionLocal
@@ -52,13 +53,26 @@ def on_startup():
     Base.metadata.create_all(bind=engine)
     
     # Auto-seed the database if it's completely empty (Cloud Deployment Fix)
-    from sqlalchemy.orm import Session
-    from db import SessionLocal
+    from models.user import User, UserRole
+    from utils.security import hash_password
     from models.ml.ml_model import MLModel
     import json
     
     db = SessionLocal()
     try:
+        # Seed Users
+        if db.query(User).count() == 0:
+            print("No users found in DB. Auto-seeding default roles...")
+            seed_users = [
+                User(name="Admin User", email="admin@pipeline.ai", hashed_password=hash_password("Admin123!"), role=UserRole.admin),
+                User(name="Dev User", email="dev@pipeline.ai", hashed_password=hash_password("Dev123!"), role=UserRole.developer),
+                User(name="Analyst User", email="analyst@pipeline.ai", hashed_password=hash_password("Analyst123!"), role=UserRole.analyst),
+            ]
+            db.add_all(seed_users)
+            db.commit()
+            print("Auto-seeding users successful.")
+
+        # Seed ML Models
         active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
         if not active_model:
             print("No active ML model found in DB. Auto-seeding default production model...")
@@ -105,6 +119,17 @@ async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
     from services.vcs.git_service import process_vcs_event
     try:
         result = process_vcs_event(db, payload)
+        
+        # Audit Log: Record the successful webhook event
+        log_action(
+            db, 
+            0, # System/Anonymous for external webhooks
+            f"vcs_webhook:{result.get('event_kind') or 'event'}", 
+            request.client.host if request else None, 
+            "System", 
+            "success"
+        )
+
         WEBHOOK_LOGS.append({
             "time": timestamp,
             "processed": True,
@@ -121,6 +146,7 @@ async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
         if len(WEBHOOK_LOGS) > 10: WEBHOOK_LOGS.pop(0)
         return {"status": "success", "source": "ROOT_OVERRIDE_V7", "result": result}
     except Exception as e:
+        log_action(db, 0, "vcs_webhook_failed", request.client.host if request else None, "System", "failure")
         WEBHOOK_LOGS.append({"time": timestamp, "error": str(e)})
         if len(WEBHOOK_LOGS) > 10: WEBHOOK_LOGS.pop(0)
         return {"status": "error", "message": str(e)}
