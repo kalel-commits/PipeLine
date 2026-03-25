@@ -51,15 +51,15 @@ def extract_pipeline_features(df: pd.DataFrame) -> pd.DataFrame:
     df['prev_pipeline_status'] = (
         df.groupby('developer_id')['pipeline_status']
         .shift(1)
-        .fillna(1)          # assume previous build was success for very first row
+        .fillna(0)          # assume previous build was success (0) for very first row
         .astype(int)
     )
 
     # ── failure_history: cumulative failures BEFORE current row per developer
     # Use transform with cumsum minus current row
     def rolling_failure_count(s):
-        # cumulative number of failures up to (but not including) current row
-        cum = s.eq(0).cumsum().shift(1).fillna(0).astype(int)
+        # cumulative number of failures (1) up to (but not including) current row
+        cum = s.eq(1).cumsum().shift(1).fillna(0).astype(int)
         return cum
 
     df['failure_history'] = (

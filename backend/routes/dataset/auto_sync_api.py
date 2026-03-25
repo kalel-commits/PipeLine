@@ -278,46 +278,6 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
     Predict risk for the latest commit using the active ML model.
     Demo mode: ?demo=high or ?demo=low feeds realistic synthetic features through the real model.
     """
-    # 0. Self-Contained Demo Mode (Bypass ALL DB requirements for stability)
-    if demo == "high":
-        return {
-            "risk": 0.94,
-            "risk_category": "High",
-            "confidence": 0.98,
-            "reason": "Extreme code churn (850 lines) · Committed at 3:00 AM · Fix keywords detected in high-density diff",
-            "top_insight": "High-Risk Nighttime Hotfix",
-            "shap_values": [
-                {"feature": "code_churn", "value": 850, "shap_value": 0.45},
-                {"feature": "commit_hour", "value": 3, "shap_value": 0.32},
-                {"feature": "has_fix", "value": 1, "shap_value": 0.15}
-            ],
-            "suggestions": [
-                {"icon": "🛑", "title": "Stall Deployment", "detail": "Massive nighttime hotfixes have a 65% higher regression rate. Intervene with a senior peer review."},
-                {"icon": "🌿", "title": "Sustainability Risk", "detail": "A failing build cycle for this diff would waste ~1.4kg of CO2."}
-            ],
-            "features": {"code_churn": 850, "commit_hour": 3, "has_fix": 1, "num_files": 12},
-            "demo_mode": True,
-            "source": "demo_high",
-        }
-    if demo == "low":
-        return {
-            "risk": 0.12,
-            "risk_category": "Low",
-            "confidence": 0.99,
-            "reason": "Standard documentation update · Routine maintenance branch · All signals within safe bounds",
-            "top_insight": "Healthy Maintenance Update",
-            "shap_values": [
-                {"feature": "code_churn", "value": 15, "shap_value": -0.35},
-                {"feature": "is_weekend", "value": 0, "shap_value": -0.12}
-            ],
-            "suggestions": [
-                {"icon": "✅", "title": "Safe to Proceed", "detail": "This commit hygiene is excellent. Proceed with automated merging."}
-            ],
-            "features": {"code_churn": 15, "is_weekend": 0, "has_fix": 0, "num_files": 1},
-            "demo_mode": True,
-            "source": "demo_low",
-        }
-
     # 1. Fetch active model
     active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
     if not active_model:
@@ -331,6 +291,7 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
 
     # 2. Prepare features (Synthetic for Demo, Real for Prod)
     if demo in ["high", "low"]:
+        from services.ml.ml_service import generate_synthetic_features
         features = generate_synthetic_features(demo)
     elif latest_commit_data:
         # ── Extension/Sync Prediction ──
@@ -376,12 +337,7 @@ def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_
 
     # 3. Perform inference using unified ML service
     prediction = predict_model(active_model, features)
-    prediction.setdefault("source", "model")
     
-    # 4. Enrich response with demo metadata if applicable
-    if demo:
-        prediction["demo_mode"] = True
-        
     return prediction
 
     # ── Normal prediction ──

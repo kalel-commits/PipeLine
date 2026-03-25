@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 import {
   Box, Typography, Fade, Grow, CircularProgress, Card, CardContent,
   LinearProgress, Chip, IconButton, Tooltip, Grid, Button, Avatar
@@ -18,8 +18,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
-const API = process.env.REACT_APP_API_URL || "https://pipeline-9ux3.onrender.com";
-const DEMO_MODE_ENABLED = process.env.REACT_APP_ENABLE_DEMO_MODE === "true";
+// Using shared api service from ../services/api
 
 export default function Dashboard() {
   const location = useLocation();
@@ -28,13 +27,13 @@ export default function Dashboard() {
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const safeSearch = DEMO_MODE_ENABLED ? location.search : "";
+  const safeSearch = location.search; // Always allow demo params for the presentation
 
   const fetchAll = useCallback(async () => {
     try {
       const [predRes, statsRes] = await Promise.all([
-        axios.get(`${API}/predict/latest${safeSearch}`).catch(() => null),
-        axios.get(`${API}/training/stats`).catch(() => null),
+        api.get(`/predict/latest${safeSearch}`).catch(() => null),
+        api.get(`/training/stats`).catch(() => null),
       ]);
       if (predRes?.data) setData(predRes.data);
       if (statsRes?.data) setStats(statsRes.data);
@@ -80,11 +79,11 @@ export default function Dashboard() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5ede3' }}>
-      
+
       {/* ── Sidebar ── */}
-      <Box sx={{ 
+      <Box sx={{
         width: 280, p: 4, display: 'flex', flexDirection: 'column', gap: 4,
-        bgcolor: 'transparent', flexShrink: 0 
+        bgcolor: 'transparent', flexShrink: 0
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
           <AutoGraphIcon sx={{ color: '#3498db', fontSize: 32 }} />
@@ -93,9 +92,9 @@ export default function Dashboard() {
           </Typography>
         </Box>
 
-        <Box sx={{ 
+        <Box sx={{
           p: 2, borderRadius: 4, bgcolor: '#ffffff', shadow: '0 4px 12px rgba(0,0,0,0.03)',
-          display: 'flex', gap: 2, alignItems: 'center' 
+          display: 'flex', gap: 2, alignItems: 'center'
         }}>
           <Avatar sx={{ bgcolor: '#3498db', width: 32, height: 32 }}>
             <AddIcon sx={{ fontSize: 20 }} />
@@ -115,7 +114,7 @@ export default function Dashboard() {
         </Box>
 
         <Box sx={{ mt: 'auto' }}>
-          <Button variant="contained" fullWidth startIcon={<AddIcon />} 
+          <Button variant="contained" fullWidth startIcon={<AddIcon />}
             sx={{ py: 1.5, background: '#3498db', boxShadow: '0 8px 20px rgba(52,152,219,0.3)' }}>
             New Analysis
           </Button>
@@ -190,7 +189,7 @@ export default function Dashboard() {
             <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                 <Box sx={{ bgcolor: '#3498db', p: 1.5, borderRadius: 3, display: 'flex' }}>
-                   <SchoolIcon sx={{ color: '#fff' }} />
+                  <SchoolIcon sx={{ color: '#fff' }} />
                 </Box>
                 <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748' }}>AI Mentor</Typography>
               </Box>
@@ -290,12 +289,12 @@ export default function Dashboard() {
             </Card>
           </Grid>
         </Grid>
-        
+
         {/* Footer info */}
         <Box sx={{ mt: 12, display: 'flex', justifyContent: 'space-between', opacity: 0.7 }}>
-           <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>API STATUS: UP</Typography>
-           <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>VERSION 4.2.0-STABLE</Typography>
-           <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>● ENCRYPTED DATA PIPELINE ACTIVE</Typography>
+          <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>API STATUS: UP</Typography>
+          <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>VERSION 4.2.0-STABLE</Typography>
+          <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>● ENCRYPTED DATA PIPELINE ACTIVE</Typography>
         </Box>
       </Box>
     </Box>
@@ -304,7 +303,7 @@ export default function Dashboard() {
 
 function SidebarItem({ icon, label, active = false }) {
   return (
-    <Box sx={{ 
+    <Box sx={{
       display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 3,
       cursor: 'pointer', transition: '0.2s',
       bgcolor: active ? '#ffffff' : 'transparent',
@@ -312,10 +311,10 @@ function SidebarItem({ icon, label, active = false }) {
       '&:hover': { bgcolor: active ? '#ffffff' : 'rgba(0,0,0,0.02)' }
     }}>
       <Box sx={{ color: active ? '#3498db' : '#718096', opacity: active ? 1 : 0.6 }}>{icon}</Box>
-      <Typography sx={{ 
-        fontSize: '0.75rem', fontWeight: 800, 
+      <Typography sx={{
+        fontSize: '0.75rem', fontWeight: 800,
         color: active ? '#2d3748' : '#718096',
-        opacity: active ? 1 : 0.6 
+        opacity: active ? 1 : 0.6
       }}>
         {label}
       </Typography>
