@@ -16,8 +16,6 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import SchoolIcon from '@mui/icons-material/School';
 import InfoIcon from '@mui/icons-material/Info';
 import mentorAvatar from '../assets/ai-mentor.png';
-// Using shared api service from ../services/api
-
 function SidebarItem({ icon, label, active = false }) {
   return (
     <Button
@@ -32,7 +30,8 @@ function SidebarItem({ icon, label, active = false }) {
         fontWeight: 800,
         fontSize: '0.75rem',
         '&:hover': { bgcolor: active ? '#005a8a' : 'rgba(0,99,151,0.05)' },
-        transition: 'all 0.2s'
+        transition: 'all 0.2s',
+        mb: 1
       }}
     >
       {label}
@@ -44,10 +43,9 @@ export default function Dashboard() {
   const location = useLocation();
   const [data, setData] = useState(null);
   const [stats, setStats] = useState(null);
-  const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const safeSearch = location.search; // Always allow demo params for the presentation
+  const safeSearch = location.search;
 
   const fetchAll = useCallback(async () => {
     try {
@@ -60,7 +58,7 @@ export default function Dashboard() {
       setError(null);
     } catch (err) {
       console.error("Fetch error:", err);
-      setError("Unable to connect to the AI engine. It might be waking up...");
+      setError("Unable to connect to the AI engine.");
     } finally {
       setLoading(false);
     }
@@ -74,7 +72,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3' }}>
+      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc' }}>
         <CircularProgress sx={{ color: '#006397' }} />
       </Box>
     );
@@ -82,12 +80,12 @@ export default function Dashboard() {
 
   if (error || !data) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3', p: 3, textAlign: 'center' }}>
-        <Typography variant="h5" color="error" gutterBottom>⚠️ {error || "No data available"}</Typography>
-        <Typography variant="body1" sx={{ mb: 3, maxWidth: 500 }}>
-          The backend service might be starting up. This can take up to 60 seconds on the first load.
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', p: 3, textAlign: 'center' }}>
+        <Typography variant="h5" color="error" gutterBottom>⚠️ Service Offline</Typography>
+        <Typography variant="body1" sx={{ mb: 3, maxWidth: 400, color: '#64748b' }}>
+          The predictive engine is currently unavailable. Please verify the backend service is running.
         </Typography>
-        <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#006397', '&:hover': { bgcolor: '#005a8a' } }}>
+        <Button variant="contained" onClick={fetchAll} sx={{ bgcolor: '#006397', '&:hover': { bgcolor: '#005a8a' }, borderRadius: '12px', px: 4 }}>
           Retry Connection
         </Button>
       </Box>
@@ -98,234 +96,211 @@ export default function Dashboard() {
   const category = data.risk_category || (data.risk > 0.65 ? 'High' : 'Medium');
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5ede3' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f8fafc' }}>
 
       {/* ── Sidebar ── */}
       <Box sx={{
-        width: 280, p: 4, display: 'flex', flexDirection: 'column', gap: 4,
-        bgcolor: 'transparent', flexShrink: 0
+        width: 280, p: 4, display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', 
+        bgcolor: '#fff', borderRight: '1px solid #e2e8f0', flexShrink: 0
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 6 }}>
           <AutoGraphIcon sx={{ color: '#006397', fontSize: 32 }} />
-          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#2d3748' }}>
+          <Typography variant="h5" sx={{ fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>
             PipelineAI
           </Typography>
         </Box>
 
-        <Box sx={{
-          p: 2, borderRadius: 4, bgcolor: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-          display: 'flex', gap: 2, alignItems: 'center'
-        }}>
-          <Avatar sx={{ bgcolor: '#006397', width: 32, height: 32 }}>
-            <AddIcon sx={{ fontSize: 20 }} />
-          </Avatar>
-          <Box>
-            <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: '#718096' }}>
-              Mode
-            </Typography>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#2d3748' }}>
-              Architectural
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+        <Box sx={{ mb: 4 }}>
           <SidebarItem icon={<DashboardIcon />} label="DASHBOARD" active />
           <SidebarItem icon={<TimelineIcon />} label="PREDICTION LAB" />
           <SidebarItem icon={<PsychologyIcon />} label="AI AUDIT" />
           <SidebarItem icon={<SchoolIcon />} label="ACADEMY" />
+          <SidebarItem icon={<HistoryIcon />} label="HISTORICAL DATA" />
         </Box>
 
         <Box sx={{ mt: 'auto' }}>
+          <Card sx={{ bgcolor: '#f1f5f9', p: 2, mb: 3, boxShadow: 'none', border: 'none' }}>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: '#64748b', mb: 1, display: 'block' }}>SYSTEM MODE</Typography>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0f172a' }}>Architectural Insight</Typography>
+          </Card>
           <Button variant="contained" fullWidth startIcon={<AddIcon />}
-            sx={{ py: 1.5, background: '#006397', boxShadow: '0 8px 20px rgba(0,99,151,0.3)', '&:hover': { background: '#005a8a' } }}>
+            sx={{ py: 1.5, bgcolor: '#006397', boxShadow: '0 8px 16px rgba(0,99,151,0.2)', borderRadius: '12px', '&:hover': { bgcolor: '#005a8a' } }}>
             New Analysis
           </Button>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 4 }}>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 800, color: '#718096', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <InfoIcon sx={{ fontSize: 16 }} /> HELP
-            </Typography>
-            <Typography sx={{ fontSize: '0.75rem', fontWeight: 800, color: '#718096', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <HistoryIcon sx={{ fontSize: 16 }} /> DOCUMENTATION
-            </Typography>
-          </Box>
         </Box>
       </Box>
 
-      {/* ── Main Content ── */}
-      <Box sx={{ flex: 1, p: { xs: 2, md: 6 }, overflowY: 'auto', minWidth: 0 }}>
-        <Box sx={{ mb: 6 }}>
-          <Typography variant="h3" sx={{ color: '#2d3748' }}>PipelineAI Command Center</Typography>
-          <Typography variant="body1" sx={{ color: '#718096', fontWeight: 500 }}>Real-time predictive CI/CD intelligence.</Typography>
+      {/* ── Main Content Area ── */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        
+        {/* Top Header */}
+        <Box sx={{ 
+          h: 80, px: { xs: 3, md: 6 }, display: 'flex', alignItems: 'center', 
+          justifyContent: 'space-between', bgcolor: '#fff', borderBottom: '1px solid #e2e8f0' 
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>Command Center</Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Chip label="API Status: UP" size="small" sx={{ bgcolor: '#f0fdf4', color: '#166534', fontWeight: 700, borderRadius: '6px' }} />
+            <Chip label="v4.2.0-STABLE" size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 700, borderRadius: '6px' }} />
+          </Box>
         </Box>
 
-        <Grid container spacing={4}>
-          {/* Risk Probability Card */}
-          <Grid item xs={12} md={8}>
-            <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="overline">Risk Probability</Typography>
-                <Chip label={`${category} Risk`} size="small" 
-                   sx={{ fontWeight: 800, background: '#fef3c7', color: '#f59e0b', fontSize: '0.65rem', borderRadius: '4px' }} />
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 2 }}>
-                <Typography variant="h1" sx={{ color: '#2d3748', fontSize: { xs: '3rem', md: '5rem' } }}>{risk}%</Typography>
-                <Typography sx={{ fontWeight: 800, color: '#718096' }}>Confidence</Typography>
-              </Box>
-              <Box sx={{ 
-                p: 2, borderRadius: '12px', bgcolor: 'rgba(245,158,11,0.08)', 
-                display: 'flex', gap: 1.5, alignItems: 'center',
-                border: '1px solid rgba(245,158,11,0.15)',
-                mt: 'auto' // Push to bottom
-              }}>
-                <InfoIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
-                  {data.reason}
-                </Typography>
-              </Box>
-            </Card>
-          </Grid>
-
-          {/* Prediction Accuracy Card */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="overline" sx={{ mb: 3 }}>
-                Prediction Accuracy
-              </Typography>
-              <Typography variant="subtitle1" sx={{ mb: 3, textAlign: 'center', color: '#2d3748' }}>
-                Was this prediction accurate?
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
-                <Box sx={{ flex: 1, border: '1px solid rgba(0,0,0,0.06)', p: 2, borderRadius: '12px', textAlign: 'center', cursor: 'pointer', transition: '0.2s', '&:hover': { bgcolor: '#f8fafc' } }}>
-                  <ThumbUpIcon sx={{ color: '#3498db', mb: 1, fontSize: 24 }} />
-                  <Typography variant="overline" sx={{ color: '#2d3748', display: 'block' }}>CORRECT</Typography>
+        {/* Dashboard Grid Container */}
+        <Box sx={{ p: { xs: 3, md: 6 }, flexGrow: 1, overflowY: 'auto' }}>
+          <Grid container spacing={4} alignItems="stretch">
+            
+            {/* Row 1: Primary Metrics */}
+            <Grid item xs={12} md={8}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+                  <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>Risk Probability</Typography>
+                  <Chip label={`${category} Risk`} sx={{ 
+                    bgcolor: category === 'High' ? '#fef2f2' : '#fffbeb',
+                    color: category === 'High' ? '#991b1b' : '#92400e',
+                    fontWeight: 800, borderRadius: '6px'
+                  }} />
                 </Box>
-                <Box sx={{ flex: 1, border: '1px solid rgba(0,0,0,0.06)', p: 2, borderRadius: '12px', textAlign: 'center', cursor: 'pointer', transition: '0.2s', '&:hover': { bgcolor: '#f8fafc' } }}>
-                  <ThumbDownIcon sx={{ color: '#f26f60', mb: 1, fontSize: 24 }} />
-                  <Typography variant="overline" sx={{ color: '#2d3748', display: 'block' }}>INCORRECT</Typography>
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h1" sx={{ color: '#0f172a', lineHeight: 1, mb: 1 }}>{risk}%</Typography>
+                  <Typography variant="body1" sx={{ color: '#64748b', fontWeight: 500 }}>Failure Confidence Level</Typography>
                 </Box>
-              </Box>
-            </Card>
-          </Grid>
-          {/* AI Mentor Card */}
-          <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(0,99,151,0.1)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                <Avatar src={mentorAvatar} sx={{ width: 48, height: 48, border: '2px solid #006397' }} />
-                <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>AI Mentor</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {data.suggestions?.map((s, idx) => (
-                    <Box key={idx} sx={{ bgcolor: '#fff', p: 2, borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                      <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
-                        <Typography sx={{ fontSize: 20 }}>{s.icon}</Typography>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#2d3748' }}>{s.title}</Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ color: '#718096', lineHeight: 1.4 }}>
-                        {s.detail}
-                      </Typography>
-                    </Box>
-                ))}
-                {!data.suggestions?.length && (
-                  <Typography variant="body2" sx={{ color: '#718096', p: 2, textAlign: 'center', fontStyle: 'italic' }}>
-                    Gathering architectural signals...
-                  </Typography>
-                )}
-              </Box>
-            </Card>
-          </Grid>
-
-          {/* SHAP Chart Card */}
-          <Grid item xs={12} md={8}>
-            <Card sx={{ height: '100%' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-                <Typography variant="h6" sx={{ textTransform: 'uppercase', color: '#2d3748', fontWeight: 900 }}>
-                  SHAP Feature Impact
-                </Typography>
-                <Tooltip title="SHAP values explain how much each feature contributed to the risk score.">
-                  <InfoIcon sx={{ color: '#2d3748', opacity: 0.6 }} />
-                </Tooltip>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                   {data.shap_values?.map((sv, idx) => {
-                     const labelMap = {
-                       'code_churn': 'Code Churn (Lines Changed)',
-                       'num_files': 'Files Impacted',
-                       'msg_length': 'Commit Message Length',
-                       'has_fix': 'Urgent Fix Indicators',
-                       'is_weekend': 'Off-Hours Activity',
-                       'commit_hour': 'Time of Day',
-                       'change_ratio': 'Deletions/Additions Ratio'
-                     };
-                     const displayName = labelMap[sv.feature] || sv.feature.replace('_', ' ');
-                     const isHighRisk = sv.shap_value > 0;
-                     return (
-                       <Box key={idx}>
-                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                           <Typography variant="overline" sx={{ color: '#2d3748', fontWeight: 700 }}>{displayName}</Typography>
-                           <Typography variant="caption" sx={{ fontWeight: 900, color: isHighRisk ? '#ba1a1a' : '#006397' }}>
-                             {isHighRisk ? '+' : ''}{sv.shap_value.toFixed(2)}
-                           </Typography>
-                         </Box>
-                         <LinearProgress variant="determinate" value={Math.min(Math.abs(sv.shap_value) * 100, 100)} 
-                          sx={{ 
-                            height: 10, borderRadius: 5, bgcolor: '#f1f5f9',
-                            '& .MuiLinearProgress-bar': { bgcolor: isHighRisk ? '#ba1a1a' : '#006397', borderRadius: 5 }
-                          }} />
-                       </Box>
-                     );
-                   })}
-              </Box>
-            </Card>
-          </Grid>
-
-          {/* Small Feature Cards & System Health integrated into Grid */}
-          {Object.entries(data.features || {}).slice(0, 4).map(([k, v]) => (
-            <Grid item xs={6} md={3} key={k}>
-              <Card sx={{ height: '100%' }}>
-                <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                  {k.replace('_', ' ')}
-                </Typography>
-                <Typography variant="h4" sx={{ color: '#2d3748' }}>
-                  {typeof v === 'number' ? v.toFixed(2).replace('.00', '') : v}
-                </Typography>
+                <Box sx={{ 
+                  mt: 'auto', p: 2, borderRadius: '12px', bgcolor: '#f8fafc',
+                  border: '1px solid #e2e8f0', display: 'flex', gap: 2, alignItems: 'center'
+                }}>
+                  <InfoIcon sx={{ color: '#006397' }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{data.reason}</Typography>
+                </Box>
               </Card>
             </Grid>
-          ))}
-          
-          {/* System Health Card */}
-          <Grid item xs={12}>
-            <Card sx={{ 
-              bgcolor: '#2d2417', color: '#fff',
-              display: 'flex', flexDirection: { xs: 'column', md: 'row' }, 
-              alignItems: 'center', justifyContent: 'space-between',
-              gap: 3
-            }}>
-               <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 12px rgba(16,185,129,0.5)' }} />
-                  <Box>
-                    <Typography variant="h5" sx={{ color: '#fff', mb: 0.5 }}>Model Status: Healthy</Typography>
-                    <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.6)' }}>System Integrity Verified</Typography>
-                  </Box>
-               </Box>
-               <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
-                 <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block' }}>
-                    Last Retrain
-                 </Typography>
-                 <Typography variant="h6" sx={{ color: '#fff' }}>
-                    {stats?.last_trained_at ? new Date(stats.last_trained_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'March 18, 2026'}
-                 </Typography>
-               </Box>
-            </Card>
-          </Grid>
-        </Grid>
 
-        {/* Footer info */}
-        <Box sx={{ mt: 12, display: 'flex', justifyContent: 'space-between', opacity: 0.7 }}>
-          <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>API STATUS: UP</Typography>
-          <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>VERSION 4.2.0-STABLE</Typography>
-          <Typography sx={{ fontSize: '0.7rem', fontWeight: 800 }}>● ENCRYPTED DATA PIPELINE ACTIVE</Typography>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700, mb: 4 }}>Prediction Feedback</Typography>
+                <Typography variant="body2" sx={{ color: '#64748b', mb: 3, textAlign: 'center' }}>Help us refine the engine by validating this prediction.</Typography>
+                <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
+                  <Button fullWidth variant="outlined" startIcon={<ThumbUpIcon />} 
+                    sx={{ py: 2, borderRadius: '12px', borderColor: '#e2e8f0', color: '#0f172a', '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' } }}>
+                    CORRECT
+                  </Button>
+                  <Button fullWidth variant="outlined" startIcon={<ThumbDownIcon />} 
+                    sx={{ py: 2, borderRadius: '12px', borderColor: '#e2e8f0', color: '#0f172a', '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' } }}>
+                    INCORRECT
+                  </Button>
+                </Box>
+              </Card>
+            </Grid>
+
+            {/* Row 2: Deep Analysis */}
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%', bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                  <Avatar src={mentorAvatar} sx={{ width: 44, height: 44, border: '2px solid #006397' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>AI Mentor</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {data.suggestions?.map((s, idx) => (
+                    <Box key={idx} sx={{ bgcolor: '#fff', p: 2.5, borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <Box sx={{ display: 'flex', gap: 1.5, mb: 1, alignItems: 'center' }}>
+                        <Typography sx={{ fontSize: 20 }}>{s.icon}</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0f172a' }}>{s.title}</Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#475569', lineHeight: 1.5 }}>{s.detail}</Typography>
+                    </Box>
+                  ))}
+                  {!data.suggestions?.length && (
+                    <Typography variant="body2" sx={{ color: '#64748b', p: 4, textAlign: 'center', fontStyle: 'italic' }}>
+                      Awaiting architectural signals...
+                    </Typography>
+                  )}
+                </Box>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={8}>
+              <Card sx={{ height: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 5 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>SHAP Feature Impact</Typography>
+                  <Tooltip title="Explains the logic behind the risk score.">
+                    <InfoIcon sx={{ color: '#94a3b8', fontSize: 20 }} />
+                  </Tooltip>
+                </Box>
+                <Grid container spacing={3}>
+                  {data.shap_values?.map((sv, idx) => {
+                    const labelMap = {
+                      'code_churn': 'Code Churn',
+                      'num_files': 'Files Impacted',
+                      'msg_length': 'Message Clarity',
+                      'has_fix': 'Urgent Fix Indicator',
+                      'is_weekend': 'Temporal Risk',
+                      'commit_hour': 'Time Pressure',
+                      'change_ratio': 'Stability Ratio'
+                    };
+                    const name = labelMap[sv.feature] || sv.feature;
+                    const isRisky = sv.shap_value > 0;
+                    return (
+                      <Grid item xs={12} sm={6} key={idx}>
+                        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569' }}>{name}</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 900, color: isRisky ? '#ba1a1a' : '#006397' }}>
+                            {isRisky ? '▲' : '▼'}{Math.abs(sv.shap_value).toFixed(2)}
+                          </Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={Math.min(Math.abs(sv.shap_value) * 100, 100)} 
+                          sx={{ 
+                            height: 6, borderRadius: 3, bgcolor: '#f1f5f9',
+                            '& .MuiLinearProgress-bar': { bgcolor: isRisky ? '#ba1a1a' : '#006397' }
+                          }} />
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Card>
+            </Grid>
+
+            {/* Row 3: Minor Signals */}
+            {Object.entries(data.features || {}).slice(0, 4).map(([k, v]) => (
+              <Grid item xs={6} md={3} key={k}>
+                <Card sx={{ textAlign: 'center' }}>
+                  <Typography variant="overline" sx={{ color: '#64748b', mb: 1, display: 'block' }}>{k.replace('_', ' ')}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                    {typeof v === 'number' ? v.toFixed(1).replace('.0', '') : v}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
+
+            {/* Row 4: System Status */}
+            <Grid item xs={12}>
+              <Card sx={{ 
+                bgcolor: '#0f172a', color: '#fff', 
+                display: 'flex', flexDirection: { xs: 'column', md: 'row' },
+                alignItems: 'center', justifyContent: 'space-between', gap: 3
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 12px rgba(16,185,129,0.5)' }} />
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>System Status: Healthy</Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>ML Engine Integrity Verified</Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
+                  <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>LAST MODEL RETRAIN</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                    {stats?.last_trained_at ? new Date(stats.last_trained_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'March 18, 2026'}
+                  </Typography>
+                </Box>
+              </Card>
+            </Grid>
+
+          </Grid>
         </Box>
+
+        {/* Footer */}
+        <Box sx={{ py: 3, px: 6, display: 'flex', justifyContent: 'center', borderTop: '1px solid #e2e8f0' }}>
+          <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600 }}>● ENCRYPTED DATA PIPELINE ACTIVE</Typography>
+        </Box>
+
       </Box>
     </Box>
   );
