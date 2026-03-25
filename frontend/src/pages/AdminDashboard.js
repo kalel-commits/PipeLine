@@ -6,7 +6,7 @@ import AuditLogTable from '../components/AuditLogTable';
 import {
   Box, Typography, Table, TableHead, TableBody, TableRow, TableCell,
   TableContainer, IconButton, Tooltip, Alert, CircularProgress,
-  Pagination, Chip
+  Pagination, Chip, Card, Button
 } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
