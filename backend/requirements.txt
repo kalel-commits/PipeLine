@@ -16,3 +16,4 @@ shap
 numpy
 anthropic
 requests
+httpx

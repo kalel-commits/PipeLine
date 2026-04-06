@@ -74,7 +74,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc' }}>
+      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5ede3' }}>
         <CircularProgress sx={{ color: '#006397' }} />
       </Box>
     );
@@ -118,7 +118,7 @@ export default function Dashboard() {
   const category = data.risk_category || (data.risk > 0.65 ? 'High' : 'Medium');
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f8fafc' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5ede3' }}>
 
       {/* ── Sidebar ── */}
       <Box sx={{
@@ -163,6 +163,7 @@ export default function Dashboard() {
           <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>Command Center</Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Chip label="API Status: UP" size="small" sx={{ bgcolor: '#f0fdf4', color: '#166534', fontWeight: 700, borderRadius: '6px' }} />
+            <Chip label="VCS Status: ACTIVE" size="small" sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontWeight: 700, borderRadius: '6px' }} />
             <Chip label="v4.2.0-STABLE" size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontWeight: 700, borderRadius: '6px' }} />
           </Box>
         </Box>
@@ -176,19 +177,26 @@ export default function Dashboard() {
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
                   <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 700 }}>Risk Probability</Typography>
-                  <Chip label={`${category} Risk`} sx={{ 
-                    bgcolor: category === 'High' ? '#fef2f2' : '#fffbeb',
-                    color: category === 'High' ? '#991b1b' : '#92400e',
-                    fontWeight: 800, borderRadius: '6px'
-                  }} />
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Chip label={data.source === 'extension' ? 'IDE Sync' : 'VCS Hook'} size="small" sx={{ 
+                      bgcolor: data.source === 'extension' ? '#e0f2fe' : '#fef2f2',
+                      color: data.source === 'extension' ? '#0369a1' : '#991b1b',
+                      fontWeight: 800, borderRadius: '6px'
+                    }} />
+                    <Chip label={`${category} Risk`} sx={{ 
+                      bgcolor: category === 'High' ? '#fef2f2' : '#fffbeb',
+                      color: category === 'High' ? '#991b1b' : '#92400e',
+                      fontWeight: 800, borderRadius: '6px'
+                    }} />
+                  </Box>
                 </Box>
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h1" sx={{ color: '#0f172a', lineHeight: 1, mb: 1 }}>{risk}%</Typography>
                   <Typography variant="body1" sx={{ color: '#64748b', fontWeight: 500 }}>Failure Confidence Level</Typography>
                 </Box>
                 <Box sx={{ 
-                  mt: 'auto', p: 2, borderRadius: '12px', bgcolor: '#f8fafc',
-                  border: '1px solid #e2e8f0', display: 'flex', gap: 2, alignItems: 'center'
+                  mt: 'auto', p: 2, borderRadius: '12px', bgcolor: '#f5ede3',
+                  border: '1px solid rgba(0,0,0,0.08)', display: 'flex', gap: 2, alignItems: 'center'
                 }}>
                   <InfoIcon sx={{ color: '#006397' }} />
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{data.reason}</Typography>
@@ -215,7 +223,7 @@ export default function Dashboard() {
 
             {/* Row 2: Deep Analysis */}
             <Grid item xs={12} md={4}>
-              <Card sx={{ height: '100%', bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <Card sx={{ height: '100%', bgcolor: '#f5ede3', border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                   <Avatar src={mentorAvatar} sx={{ width: 44, height: 44, border: '2px solid #006397' }} />
                   <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>AI Mentor</Typography>
