@@ -10,10 +10,17 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [role, setRole] = useState('Developer');
 
+  // Hydrate user from token on startup
+  useEffect(() => {
+    if (token) {
+      // For the demo, we assume the token is valid and just set the mock user
+      setUser({ ...MOCK_USER, role: 'Developer' });
+    }
+  }, [token]);
+
   const login = (newToken) => {
     localStorage.setItem('token', newToken);
     setToken(newToken);
-    // In a real app, you'd decode the JWT here to get the user info
     setUser({ ...MOCK_USER, role: 'Developer' });
   };
 

@@ -16,11 +16,11 @@ const LandingPage = () => {
             <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 font-headline tracking-tight font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 px-2" href="#">Admin</a>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/login" className="text-sm font-bold text-slate-600 hover:text-primary transition-colors">
+            <Link to="/login" className="text-sm font-bold text-slate-600 hover:text-blue-700 transition-colors">
               Sign In
             </Link>
             <Link to="/login">
-              <button className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-all">
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-all hover:bg-blue-700">
                 Get Started
               </button>
             </Link>
