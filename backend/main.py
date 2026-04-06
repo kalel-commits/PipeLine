@@ -206,7 +206,7 @@ def force_demo_prediction(db: Session = Depends(get_db)):
 
 @app.get("/")
 def read_root():
-    return {"message": "PipelineAI API is live. Build the frontend to see the dashboard here."}
+    return {"message": "PipelineAI API Restoration v2.1. Routing Fix Active."}
 
 @app.get("/db-check")
 def db_check(db: Session = Depends(get_db)):

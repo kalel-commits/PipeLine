@@ -49,6 +49,20 @@ training_status = {
     "model_version": 0,
 }
 
+def parse_weekend(date_str: str) -> int:
+    try:
+        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        return 1 if dt.weekday() >= 5 else 0
+    except:
+        return 0
+
+def parse_hour(date_str: str) -> int:
+    try:
+        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        return dt.hour
+    except:
+        return 12
+
 # Drift monitoring – rolling window
 prediction_window: deque = deque(maxlen=50)
 DRIFT_THRESHOLD = 0.15  # mean risk shift that triggers drift alert
@@ -260,11 +274,58 @@ def train_model(data):
 # Routes
 # ──────────────────────────────────────────────────────────────────
 @router.post("/dataset/auto-sync")
-async def auto_sync(background_tasks: BackgroundTasks, data: List[Any] = Body(...)):
+async def auto_sync(background_tasks: BackgroundTasks, data: List[Any] = Body(...), db: Session = Depends(get_db)):
     print(f"Received auto-sync payload: {data}")  # Debug: log incoming webhook payload
+    
+    # ── PERSIST LATEST TO DB (NEW UNIFIED LOGIC) ──
+    if data and isinstance(data, list):
+        try:
+            latest = data[0]
+            # Calculate prediction logic (mirroring git_service.py)
+            added = int(latest.get('added', 0))
+            removed = int(latest.get('removed', 0))
+            churn = added + removed
+            num_files = int(latest.get('files_changed', 1))
+            message = latest.get('message', 'IDE Sync')
+            
+            features = {
+                "code_churn": float(churn),
+                "change_ratio": float(added / churn) if churn > 0 else 0.5,
+                "num_files": float(num_files),
+                "msg_length": float(len(message)),
+                "has_fix": 1.0 if any(w in message.lower() for w in ['fix', 'urgent', 'bug']) else 0.0,
+                "is_weekend": float(parse_weekend(latest.get('date', ''))),
+                "commit_hour": float(parse_hour(latest.get('date', '')))
+            }
+            
+            # Get active model & predict
+            active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
+            prediction = predict_model(active_model, features)
+            
+            # Clear old "is_latest" for this system (mock user 0 for now)
+            db.query(VCSPrediction).filter(VCSPrediction.user_id == 0, VCSPrediction.is_latest == True).update({"is_latest": False})
+            
+            # Save new prediction
+            new_git_pred = VCSPrediction(
+                user_id=0,
+                commit_sha=latest.get('hash'),
+                risk_score=prediction["risk"],
+                risk_category=prediction["risk_category"],
+                explanation=prediction["reason"],
+                shap_json=json.dumps(prediction.get("shap_values", [])),
+                suggestions_json=json.dumps(prediction.get("suggestions", [])),
+                features_json=json.dumps({**features, "_meta": {"source": "extension"}}),
+                source="extension",
+                is_latest=True
+            )
+            db.add(new_git_pred)
+            db.commit()
+        except Exception as e:
+            print(f"Failed to persist IDE sync to DB: {e}")
+
     training_status["status"] = "queued"
     background_tasks.add_task(train_model, data)
-    return {"status": "Training started in background"}
+    return {"status": "Training started and prediction persisted"}
 
 
 @router.get("/training/status")
@@ -276,76 +337,54 @@ def get_training_status():
 @router.get("/predict/latest")
 def predict_latest(demo: Optional[str] = Query(None), db: Session = Depends(get_db)):
     """
-    Predict risk for the latest commit using the active ML model.
-    Demo mode: ?demo=high or ?demo=low feeds realistic synthetic features through the real model.
+    Predict risk for the latest activity using the active ML model.
+    Pulls from VCSPrediction DB (Unified: GitLab/GitHub/IDE Extension).
     """
-    # 1. Fetch active model
-    active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
-    
-    # 2. Prepare features (Synthetic for Demo, Real for Prod)
+    # 1. Demo Mode Override
     if demo in ["high", "low"]:
-        from services.ml.ml_service import generate_synthetic_features
+        from services.ml.ml_service import generate_synthetic_features, predict_model
+        active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
         features = generate_synthetic_features(demo)
-        if not active_model:
-             # If no model in DB, still show the demo logic via the service fallback
-             from services.ml.ml_service import predict_model
-             return predict_model(None, features)
-    elif latest_commit_data:
-        # ── Extension/Sync Prediction ──
-        df_latest = pd.DataFrame([latest_commit_data])
-        features_df = extract_features(df_latest)
-        features = features_df.iloc[0].to_dict()
-    else:
-        # ── Fallback to latest GitLab MR Prediction ──
-        latest_git = db.query(VCSPrediction).order_by(VCSPrediction.created_at.desc()).first()
-        if latest_git:
-            # Helper to parse JSON safely
-            import json
-            def safe_parse(val, default):
-                try:
-                    return json.loads(val) if val else default
-                except Exception:
-                    return default
+        return predict_model(active_model, features)
 
-            return {
-                "risk": latest_git.risk_score,
-                "risk_category": latest_git.risk_category,
-                "confidence": 0.85,
-                "reason": latest_git.explanation,
-                "top_insight": latest_git.risk_category + " Risk MR Detected",
-                "shap_values": safe_parse(latest_git.shap_json, []),
-                "suggestions": safe_parse(latest_git.suggestions_json, []),
-                "features": safe_parse(latest_git.features_json, {}),
-                "demo_mode": False,
-                "mr_id": latest_git.mr_id,
-                "source": "vcs_prediction_db",
-                "debug": safe_parse(latest_git.features_json, {}).get("_meta", {}),
-            }
-            
+    # 2. Unified Prediction Retrieval (DB centric)
+    # Order by is_latest and timestamp to get absolute latest record
+    latest_git = db.query(VCSPrediction).order_by(VCSPrediction.is_latest.desc(), VCSPrediction.timestamp.desc()).first()
+    
+    if latest_git:
+        import json
+        def safe_parse(val, default):
+            try:
+                return json.loads(val) if val else default
+            except Exception:
+                return default
+
         return {
-            "risk": 0.0,
-            "risk_category": "None",
-            "confidence": 1.0,
-            "reason": "Awaiting first commit for real-time analysis",
-            "top_insight": "System Idle",
+            "risk": latest_git.risk_score,
+            "risk_category": latest_git.risk_category,
+            "confidence": 0.85,
+            "reason": latest_git.explanation,
+            "top_insight": latest_git.risk_category + " Risk Detected",
+            "shap_values": safe_parse(latest_git.shap_json, []),
+            "suggestions": safe_parse(latest_git.suggestions_json, []),
+            "features": safe_parse(latest_git.features_json, {}),
             "demo_mode": False,
-            "source": "empty_state",
+            "source": latest_git.source,
+            "id": latest_git.id,
+            "timestamp": latest_git.timestamp.isoformat() if latest_git.timestamp else None,
+            "commit_sha": latest_git.commit_sha
         }
-
-    # 3. Perform inference using unified ML service
-    prediction = predict_model(active_model, features)
-    
-    # Audit Log: Record prediction event
-    log_action(
-        db, 
-        0, # System/Anonymous
-        f"vcs_prediction_viewed:{'demo' if demo else 'realtime'}", 
-        None, 
-        "Developer", 
-        "success"
-    )
-    
-    return prediction
+            
+    # 3. Ultimate Fallback (Empty State)
+    return {
+        "risk": 0.0,
+        "risk_category": "None",
+        "confidence": 1.0,
+        "reason": "Awaiting activity for analysis",
+        "top_insight": "System Idle",
+        "demo_mode": False,
+        "source": "empty_state",
+    }
 
     # ── Normal prediction ──
     try:
