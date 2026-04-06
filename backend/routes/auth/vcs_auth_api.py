@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import os
 import httpx
@@ -73,12 +74,11 @@ async def vcs_callback(provider: str, code: str, db: Session = Depends(get_db)):
                 repo_info = await discover_and_hook_gitlab(client, token)
 
             log_action(db, 0, f"vcs_automation:{provider}:success", None, "System", "success")
-            return {
-                "status": "success",
-                "provider": provider,
-                "project": repo_info,
-                "message": f"Successfully connected to {provider}! Your repository is now under active monitoring."
-            }
+            
+            # The "One-Click" redirection: Send the user back to the Vercel Dashboard with their token
+            # Note: For production, we'd use an environmental variable for the FRONTEND_URL
+            frontend_url = os.getenv("FRONTEND_URL", "https://pipe-line-five.vercel.app")
+            return RedirectResponse(url=f"{frontend_url}/login?token={token}")
 
         except Exception as e:
             log_action(db, 0, f"vcs_automation:{provider}:failed", None, "System", "failure")
