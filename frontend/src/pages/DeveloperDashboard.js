@@ -141,13 +141,21 @@ export default function Dashboard() {
         </Box>
 
         <Box sx={{ mt: 'auto' }}>
-          <Card sx={{ bgcolor: '#f1f5f9', p: 2, mb: 3, boxShadow: 'none', border: 'none' }}>
+          <Card sx={{ bgcolor: '#f1f5f9', p: 2, mb: 1.5, boxShadow: 'none', border: 'none' }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: '#64748b', mb: 1, display: 'block' }}>SYSTEM MODE</Typography>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0f172a' }}>Architectural Insight</Typography>
           </Card>
           <Button variant="contained" fullWidth startIcon={<AddIcon />}
-            sx={{ py: 1.5, bgcolor: '#006397', boxShadow: '0 8px 16px rgba(0,99,151,0.2)', borderRadius: '12px', '&:hover': { bgcolor: '#005a8a' } }}>
+            sx={{ py: 1.5, mb: 1, bgcolor: '#006397', boxShadow: '0 8px 16px rgba(0,99,151,0.2)', borderRadius: '12px', '&:hover': { bgcolor: '#005a8a' } }}>
             New Analysis
+          </Button>
+          <Button 
+            variant="text" 
+            fullWidth 
+            onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}
+            sx={{ mt: 1, color: '#64748b', fontWeight: 600, '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' } }}
+          >
+            Logout Session
           </Button>
         </Box>
       </Box>

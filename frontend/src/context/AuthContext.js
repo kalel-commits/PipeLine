@@ -6,20 +6,31 @@ export const AuthContext = createContext();
 const MOCK_USER = { user_id: 1, role: 'Developer', name: 'Dev User', email: 'dev@local' };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(MOCK_USER);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
   const [role, setRole] = useState('Developer');
 
-  // Allow role switching for demo purposes
-  const switchRole = (newRole) => {
-    setRole(newRole);
-    setUser({ ...MOCK_USER, role: newRole });
+  const login = (newToken) => {
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+    // In a real app, you'd decode the JWT here to get the user info
+    setUser({ ...MOCK_USER, role: 'Developer' });
   };
 
-  const login = () => { };
-  const logout = () => { };
+  const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    window.location.href = '/login';
+  };
+
+  const switchRole = (newRole) => {
+    setRole(newRole);
+    if (user) setUser({ ...user, role: newRole });
+  };
 
   return (
-    <AuthContext.Provider value={{ user: { ...user, role }, token: null, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, token, login, logout, switchRole }}>
       {children}
     </AuthContext.Provider>
   );
