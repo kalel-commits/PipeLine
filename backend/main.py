@@ -158,6 +158,7 @@ async def root_vcs_webhook(request: Request, db: Session = Depends(get_db)):
 def get_logs():
     return {"logs": WEBHOOK_LOGS}
 
+# Modern V1 Routes
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(dataset_router, prefix="/api/v1")
@@ -166,6 +167,16 @@ app.include_router(auto_sync_router, prefix="/api/v1")
 app.include_router(ml_router, prefix="/api/v1")
 app.include_router(feedback_router, prefix="/api/v1")
 app.include_router(vcs_auth_router, prefix="/api/v1")
+
+# Legacy/Compatibility Routes (Root)
+app.include_router(auth_router)
+app.include_router(admin_router)
+app.include_router(dataset_router)
+app.include_router(feature_extraction_router)
+app.include_router(auto_sync_router)
+app.include_router(ml_router)
+app.include_router(feedback_router)
+app.include_router(vcs_auth_router)
 # VCS Router removed - Logic now handled by root_vcs_webhook above
 
 @app.get("/api/v1/demo/trigger")
