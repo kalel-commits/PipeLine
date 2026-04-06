@@ -174,7 +174,16 @@ def process_vcs_event(db: Session, payload: dict):
 
     # 4. Persistence
     import json
+    
+    # ── UNIFIED LATEST LOGIC ──
+    # Clear previous 'latest' for this project/user
+    db.query(VCSPrediction).filter(
+        VCSPrediction.project_id == project_id, 
+        VCSPrediction.is_latest == True
+    ).update({"is_latest": False})
+
     git_pred = VCSPrediction(
+        user_id=0, # Default system user for now
         mr_id=mr_id,
         project_id=project_id,
         branch=branch,
@@ -184,7 +193,9 @@ def process_vcs_event(db: Session, payload: dict):
         explanation=prediction["reason"],
         shap_json=json.dumps(prediction.get("shap_values", [])),
         suggestions_json=json.dumps(prediction.get("suggestions", [])),
-        features_json=json.dumps({**features, "_meta": debug_meta})
+        features_json=json.dumps({**features, "_meta": debug_meta}),
+        source="webhook",
+        is_latest=True
     )
     db.add(git_pred)
     db.commit()
