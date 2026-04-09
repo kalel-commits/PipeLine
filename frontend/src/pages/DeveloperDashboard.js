@@ -352,21 +352,19 @@ export default function Dashboard() {
                     <StorageIcon sx={{ color: '#94a3b8', fontSize: 24 }} />
                   </Tooltip>
                 </Box>
-                <Grid container spacing={1} sx={{ display: 'flex', flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(28px, 1fr))', gap: 1 }}>
                   {clusterGrid.map((node) => (
-                    <Grid item key={node.id} sx={{ width: '10%' }}>
-                      <Tooltip title={`Node: ${node.id} | Status: ${node.status === 0 ? 'Healthy' : node.status === 1 ? 'Under Load' : 'Critical'}`}>
-                        <Box sx={{ 
-                          width: '100%', pt: '100%', borderRadius: 1.2,
-                          bgcolor: node.status === 0 ? '#10B981' : node.status === 1 ? '#F59E0B' : '#ef4444',
-                          opacity: 0.8, transition: 'all 0.2s',
-                          cursor: 'pointer',
-                          '&:hover': { opacity: 1, transform: 'scale(1.2)', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
-                        }} />
-                      </Tooltip>
-                    </Grid>
+                    <Tooltip key={node.id} title={`Node: ${node.id} | Status: ${node.status === 0 ? 'Healthy' : node.status === 1 ? 'Under Load' : 'Critical'}`}>
+                      <Box sx={{ 
+                        width: '100%', aspectRatio: '1 / 1', borderRadius: 1.2,
+                        bgcolor: node.status === 0 ? '#10B981' : node.status === 1 ? '#F59E0B' : '#ef4444',
+                        opacity: 0.8, transition: 'all 0.2s',
+                        cursor: 'pointer',
+                        '&:hover': { opacity: 1, transform: 'scale(1.3)', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }
+                      }} />
+                    </Tooltip>
                   ))}
-                </Grid>
+                </Box>
                 <Box sx={{ mt: 3, display: 'flex', gap: 3, justifyContent: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#10B981' }} />

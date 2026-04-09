@@ -481,14 +481,6 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
         category = "Low"
         if prob > 0.65: category = "High"
         elif prob > 0.35: category = "Medium"
-        
-        return {
-            "risk": prob,
-            "risk_category": category,
-            "reason": "ML Model Architecture Analysis",
-            "source": prediction_source,
-            "suggestions": [] # To be populated by generate_suggestions if called from auto_sync_api
-        }
 
     except Exception as e:
         print(f"Model/scaler load failed for prediction fallback: {e}")
