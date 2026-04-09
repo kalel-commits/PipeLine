@@ -38,6 +38,7 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
+      const res = await api.post('/auth/login', { email, password });
       console.log("✅ [AUTH FLOW] Login successful. Navigating to dashboard...");
       login(res.data.access_token);
       navigate('/dashboard');

@@ -45,10 +45,14 @@ def get_db():
     finally:
         db.close()
 
-# CORS setup for frontend communication
+# CORS setup for production - Restricted to Vercel and Localhost for security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://pipe-line-five.vercel.app", 
+        "http://localhost:3000",
+        "http://localhost:3001"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

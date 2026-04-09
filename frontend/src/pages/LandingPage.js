@@ -42,12 +42,12 @@ const LandingPage = () => {
                 Ship with surgical precision. Our local-first AI engine analyzes code changes in real-time to intercept breaking builds before they ever reach your staging server.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
-                <Link to="/dashboard">
-                  <button className="bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-lg font-bold shadow-lg active:scale-95 transition-all">
+                <Link to="/login">
+                  <button className="bg-blue-600 text-white px-8 py-4 rounded-lg font-bold shadow-lg active:scale-95 transition-all hover:bg-blue-700">
                     Start Local Analysis
                   </button>
                 </Link>
-                <Link to="/dashboard">
+                <Link to="/login">
                   <button className="bg-transparent text-on-surface hover:bg-surface-container-low px-8 py-4 rounded-lg font-bold transition-all">
                     View Documentation
                   </button>
