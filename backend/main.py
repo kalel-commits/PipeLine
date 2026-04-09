@@ -31,6 +31,7 @@ from routes.ml.ml_api import router as ml_router
 from routes.feedback_api import router as feedback_router
 from routes.vcs.webhook import router as vcs_router
 from routes.auth.vcs_auth_api import router as vcs_auth_router
+from routes.devops_api import router as devops_router
 
 app = FastAPI(title="CI/CD Failure Prediction System API", version="1.0.0")
 
@@ -167,6 +168,7 @@ app.include_router(auto_sync_router, prefix="/api/v1")
 app.include_router(ml_router, prefix="/api/v1")
 app.include_router(feedback_router, prefix="/api/v1")
 app.include_router(vcs_auth_router, prefix="/api/v1")
+app.include_router(devops_router, prefix="/api/v1")
 
 # Legacy/Compatibility Routes (Root)
 app.include_router(auth_router)
@@ -177,6 +179,7 @@ app.include_router(auto_sync_router)
 app.include_router(ml_router)
 app.include_router(feedback_router)
 app.include_router(vcs_auth_router)
+app.include_router(devops_router)
 # VCS Router removed - Logic now handled by root_vcs_webhook above
 
 @app.get("/api/v1/demo/trigger")
