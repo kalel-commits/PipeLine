@@ -5,6 +5,40 @@ import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ error, errorInfo });
+    console.error("🔥 [REACT CRASH BOUNDARY CAUGHT ERROR]:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', background: '#fef2f2', color: '#991b1b', height: '100vh', fontFamily: 'monospace' }}>
+          <h2>🚨 UI Render Crash Detected</h2>
+          <p>Brave/Incognito or an extension provoked a fatal UI error.</p>
+          <hr />
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: '13px' }}>{this.state.error && this.state.error.toString()}</pre>
+          <br/>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: '11px' }}>{this.state.errorInfo && this.state.errorInfo.componentStack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const theme = createTheme({
   palette: {
@@ -65,19 +99,23 @@ const theme = createTheme({
 });
 
 const App = () => (
-  <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <AuthProvider>
-      <Router>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="*" element={<Navigate to="/dashboard" />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  </ThemeProvider>
+  <ErrorBoundary>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Router>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
+  </ErrorBoundary>
 );
 
 export default App;
