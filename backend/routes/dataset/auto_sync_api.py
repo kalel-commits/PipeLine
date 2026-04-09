@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from db import SessionLocal
 from models.ml.ml_model import MLModel
 from models.vcs_prediction import VCSPrediction
-from services.ml.ml_service import predict_model, generate_synthetic_features, extract_features
+from services.ml.ml_service import predict_model, generate_synthetic_features, extract_features, generate_suggestions
 from services.audit_log_service import log_action
 
 router = APIRouter()
@@ -301,7 +301,24 @@ async def auto_sync(background_tasks: BackgroundTasks, data: List[Any] = Body(..
             # Get active model & predict
             active_model = db.query(MLModel).filter(MLModel.is_active == True).first()
             prediction = predict_model(active_model, features)
-            
+            risk = prediction["risk"]
+
+            # Generate rich AI Mentor suggestions
+            suggestions = generate_suggestions(features, risk)
+
+            # Build SHAP-like heuristic values for the frontend chart
+            churn_val = features["code_churn"]
+            shap_values = [
+                {"feature": "code_churn",    "value": churn_val,              "shap_value": round(min(churn_val / 600.0, 0.55) if risk > 0.5 else -0.1, 4)},
+                {"feature": "has_fix",       "value": features["has_fix"],     "shap_value": round(0.25 if features["has_fix"] else -0.05, 4)},
+                {"feature": "num_files",     "value": features["num_files"],   "shap_value": round(0.15 if features["num_files"] > 3 else -0.03, 4)},
+                {"feature": "change_ratio",  "value": features["change_ratio"],"shap_value": round((features["change_ratio"] - 0.5) * 0.3, 4)},
+                {"feature": "commit_hour",   "value": features["commit_hour"], "shap_value": round(0.2 if features["commit_hour"] >= 22 or features["commit_hour"] <= 4 else -0.02, 4)},
+                {"feature": "is_weekend",    "value": features["is_weekend"],  "shap_value": round(0.1 if features["is_weekend"] else -0.02, 4)},
+                {"feature": "msg_length",    "value": features["msg_length"],  "shap_value": round(-0.05 if features["msg_length"] > 20 else 0.05, 4)},
+            ]
+            shap_values.sort(key=lambda x: abs(x["shap_value"]), reverse=True)
+
             # Clear old "is_latest" for this system (mock user 0 for now)
             db.query(VCSPrediction).filter(VCSPrediction.user_id == 0, VCSPrediction.is_latest == True).update({"is_latest": False})
             
@@ -309,11 +326,11 @@ async def auto_sync(background_tasks: BackgroundTasks, data: List[Any] = Body(..
             new_git_pred = VCSPrediction(
                 user_id=0,
                 commit_sha=latest.get('hash'),
-                risk_score=prediction["risk"],
+                risk_score=risk,
                 risk_category=prediction["risk_category"],
                 explanation=prediction["reason"],
-                shap_json=json.dumps(prediction.get("shap_values", [])),
-                suggestions_json=json.dumps(prediction.get("suggestions", [])),
+                shap_json=json.dumps(shap_values),
+                suggestions_json=json.dumps(suggestions),
                 features_json=json.dumps({**features, "_meta": {"source": "extension"}}),
                 source="extension",
                 is_latest=True

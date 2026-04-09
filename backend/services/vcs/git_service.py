@@ -3,7 +3,7 @@ import requests
 from sqlalchemy.orm import Session
 from models.vcs_prediction import VCSPrediction
 from models.ml.ml_model import MLModel
-from services.ml.ml_service import predict_model
+from services.ml.ml_service import predict_model, generate_suggestions
 from datetime import datetime
 
 VCS_API_TOKEN = os.getenv("VCS_API_TOKEN", os.getenv("GITLAB_TOKEN"))
@@ -173,6 +173,23 @@ def process_vcs_event(db: Session, payload: dict):
     }
 
     # 4. Persistence
+    # Generate rich AI Mentor suggestions
+    rich_suggestions = generate_suggestions(features, prediction["risk"])
+
+    # Build SHAP-like heuristic values
+    churn_val = features["code_churn"]
+    risk = prediction["risk"]
+    shap_values_list = [
+        {"feature": "code_churn",   "value": churn_val,               "shap_value": round(min(churn_val / 600.0, 0.55) if risk > 0.5 else -0.1, 4)},
+        {"feature": "has_fix",      "value": features["has_fix"],      "shap_value": round(0.25 if features["has_fix"] else -0.05, 4)},
+        {"feature": "num_files",    "value": features["num_files"],    "shap_value": round(0.15 if features["num_files"] > 3 else -0.03, 4)},
+        {"feature": "change_ratio", "value": features["change_ratio"], "shap_value": round((features["change_ratio"] - 0.5) * 0.3, 4)},
+        {"feature": "commit_hour",  "value": features["commit_hour"],  "shap_value": round(0.2 if features["commit_hour"] >= 22 or features["commit_hour"] <= 4 else -0.02, 4)},
+        {"feature": "is_weekend",   "value": features["is_weekend"],   "shap_value": round(0.1 if features["is_weekend"] else -0.02, 4)},
+        {"feature": "msg_length",   "value": features["msg_length"],   "shap_value": round(-0.05 if features["msg_length"] > 20 else 0.05, 4)},
+    ]
+    shap_values_list.sort(key=lambda x: abs(x["shap_value"]), reverse=True)
+
     import json
     
     # ── UNIFIED LATEST LOGIC ──
@@ -191,8 +208,8 @@ def process_vcs_event(db: Session, payload: dict):
         risk_score=prediction["risk"],
         risk_category=prediction["risk_category"],
         explanation=prediction["reason"],
-        shap_json=json.dumps(prediction.get("shap_values", [])),
-        suggestions_json=json.dumps(prediction.get("suggestions", [])),
+        shap_json=json.dumps(shap_values_list),
+        suggestions_json=json.dumps(rich_suggestions),
         features_json=json.dumps({**features, "_meta": debug_meta}),
         source="webhook",
         is_latest=True
