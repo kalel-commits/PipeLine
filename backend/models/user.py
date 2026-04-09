@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, func, Text
 from sqlalchemy.orm import relationship
 from models.base import Base
 import enum
@@ -22,3 +22,11 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     audit_logs = relationship("AuditLog", back_populates="user")
+
+    # VCS Integration Fields — persists the OAuth token and hooked repo per user
+    vcs_provider = Column(String(20), nullable=True)       # 'github' or 'gitlab'
+    vcs_token = Column(Text, nullable=True)                # OAuth access token
+    vcs_repo_id = Column(String(50), nullable=True)        # e.g. "123456" (GitHub repo ID)
+    vcs_repo_name = Column(String(255), nullable=True)     # e.g. "kalel-commits/PipeLine"
+    vcs_webhook_id = Column(String(50), nullable=True)     # ID of the registered webhook
+    vcs_github_login = Column(String(100), nullable=True)  # GitHub username for linking

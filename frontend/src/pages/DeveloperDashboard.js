@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../services/api";
+import VCSIntegration from "../components/VCSIntegration";
 import {
   Box, Typography, Fade, Grow, CircularProgress, Card, CardContent,
   LinearProgress, Chip, IconButton, Tooltip, Grid, Button, Avatar
@@ -16,6 +17,11 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import SchoolIcon from '@mui/icons-material/School';
 import InfoIcon from '@mui/icons-material/Info';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import StorageIcon from '@mui/icons-material/Storage';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import WarningIcon from '@mui/icons-material/Warning';
+import ErrorIcon from '@mui/icons-material/Error';
+import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import mentorAvatar from '../assets/ai-mentor.png';
 
 function SidebarItem({ icon, label, active = false }) {
@@ -45,18 +51,24 @@ export default function Dashboard() {
   const location = useLocation();
   const [data, setData] = useState(null);
   const [stats, setStats] = useState(null);
+  const [devops, setDevops] = useState(null);
+  const [clusterGrid, setClusterGrid] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const safeSearch = location.search;
 
   const fetchAll = useCallback(async () => {
     try {
-      const [predRes, statsRes] = await Promise.all([
+      const [predRes, statsRes, devopsRes, gridRes] = await Promise.all([
         api.get(`/predict/latest${safeSearch}`).catch(() => null),
         api.get(`/training/stats`).catch(() => null),
+        api.get(`/devops/stats`).catch(() => null),
+        api.get(`/devops/cluster-grid`).catch(() => null)
       ]);
       if (predRes?.data) setData(predRes.data);
       if (statsRes?.data) setStats(statsRes.data);
+      if (devopsRes?.data) setDevops(devopsRes.data);
+      if (gridRes?.data) setClusterGrid(gridRes.data);
       setError(null);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -228,8 +240,40 @@ export default function Dashboard() {
                 </Box>
               </Card>
             </Grid>
+            
+            {/* DORA Metrics Row */}
+            {devops && (
+              <Grid item xs={12}>
+                <Grid container spacing={3}>
+                  {Object.entries(devops.dora).map(([key, item]) => (
+                    <Grid item xs={12} sm={6} md={3} key={key}>
+                      <Card sx={{ bgcolor: '#fff', border: '1px solid #e2e8f0', p: 3 }}>
+                        <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 800 }}>
+                          {key.replace(/_/g, ' ')}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 1 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#0f172a' }}>{item.value}</Typography>
+                          <Chip label={item.status} size="small" variant="outlined" sx={{ 
+                            height: 20, fontSize: '0.65rem', fontWeight: 900, 
+                            color: item.status === 'Elite' ? '#10B981' : '#006397',
+                            borderColor: item.status === 'Elite' ? '#10B981' : '#006397'
+                          }} />
+                        </Box>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Grid>
+            )}
 
-            {/* Row 2: Deep Analysis */}
+            {/* Row 2: VCS Integration Manager */}
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%', bgcolor: '#f8fafc', border: '1px solid rgba(0,0,0,0.06)', boxShadow: 'none' }}>
+                <VCSIntegration />
+              </Card>
+            </Grid>
+
+            {/* Row 2: AI Mentor */}
             <Grid item xs={12} md={4}>
               <Card sx={{ height: '100%', bgcolor: '#f5ede3', border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
@@ -296,7 +340,51 @@ export default function Dashboard() {
               </Card>
             </Grid>
 
-            {/* Row 3: Minor Signals */}
+            {/* Row 3: Infrastructure Pulse */}
+            <Grid item xs={12}>
+              <Card sx={{ p: 4, mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: '#0f172a' }}>Infrastructure Pulse (Simulated K8s)</Typography>
+                    <Typography variant="body2" sx={{ color: '#64748b' }}>Real-time health status of 100 production nodes</Typography>
+                  </Box>
+                  <Tooltip title="Visual grid of Kubernetes node health. Red indicates pod failure.">
+                    <StorageIcon sx={{ color: '#94a3b8', fontSize: 24 }} />
+                  </Tooltip>
+                </Box>
+                <Grid container spacing={1} sx={{ display: 'flex', flexWrap: 'wrap' }}>
+                  {clusterGrid.map((node) => (
+                    <Grid item key={node.id} sx={{ width: '10%' }}>
+                      <Tooltip title={`Node: ${node.id} | Status: ${node.status === 0 ? 'Healthy' : node.status === 1 ? 'Under Load' : 'Critical'}`}>
+                        <Box sx={{ 
+                          width: '100%', pt: '100%', borderRadius: 1.2,
+                          bgcolor: node.status === 0 ? '#10B981' : node.status === 1 ? '#F59E0B' : '#ef4444',
+                          opacity: 0.8, transition: 'all 0.2s',
+                          cursor: 'pointer',
+                          '&:hover': { opacity: 1, transform: 'scale(1.2)', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }
+                        }} />
+                      </Tooltip>
+                    </Grid>
+                  ))}
+                </Grid>
+                <Box sx={{ mt: 3, display: 'flex', gap: 3, justifyContent: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#10B981' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Healthy</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Warning</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#ef4444' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>Critical</Typography>
+                  </Box>
+                </Box>
+              </Card>
+            </Grid>
+
+            {/* Row 4: Minor Signals */}
             {Object.entries(data.features || {}).slice(0, 4).map(([k, v]) => (
               <Grid item xs={6} md={3} key={k}>
                 <Card sx={{ textAlign: 'center' }}>
