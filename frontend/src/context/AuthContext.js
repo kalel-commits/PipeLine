@@ -1,9 +1,8 @@
 import React, { createContext, useState, useEffect } from 'react';
 
-export const AuthContext = createContext();
+import api from '../services/api';
 
-// DEV MODE: Skip authentication, provide a mock Admin user
-const MOCK_USER = { user_id: 1, role: 'Developer', name: 'Dev User', email: 'dev@local' };
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,16 +11,26 @@ export const AuthProvider = ({ children }) => {
 
   // Hydrate user from token on startup
   useEffect(() => {
-    if (token) {
-      // For the demo, we assume the token is valid and just set the mock user
-      setUser({ ...MOCK_USER, role: 'Developer' });
-    }
+    const fetchMe = async () => {
+      if (token) {
+        try {
+          const res = await api.get('/auth/profile');
+          setUser(res.data);
+          setRole(res.data.role);
+          console.log("✅ [AUTH FLOW] Session hydrated for:", res.data.email);
+        } catch (err) {
+          console.error("❌ [AUTH FLOW] Session invalid. Logging out.");
+          logout();
+        }
+      }
+    };
+    fetchMe();
   }, [token]);
 
   const login = (newToken) => {
     localStorage.setItem('token', newToken);
     setToken(newToken);
-    setUser({ ...MOCK_USER, role: 'Developer' });
+    // User will be hydrated automatically due to the useEffect above
   };
 
   const logout = () => {

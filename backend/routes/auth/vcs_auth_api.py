@@ -23,7 +23,7 @@ GITLAB_CLIENT_ID = os.getenv("GITLAB_CLIENT_ID", "mock_id")
 GITLAB_CLIENT_SECRET = os.getenv("GITLAB_CLIENT_SECRET", "mock_secret")
 
 # The root URL of this Render deployment
-RENDER_HOST = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000")
+RENDER_HOST = os.getenv("RENDER_EXTERNAL_URL", "https://pipeline-9ux3.onrender.com")
 
 @router.get("/{provider}/login")
 def vcs_login(provider: str):
