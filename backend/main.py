@@ -5,6 +5,9 @@ from fastapi.responses import FileResponse
 from db import engine, SessionLocal
 from models.base import Base
 import os
+import time
+import traceback
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -50,6 +53,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── LOGGING MIDDLEWARE ───────────────────────────────────────────
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = (time.time() - start_time) * 1000
+    
+    # Log details to console for Render/Terminal visibility
+    status_label = "✅" if response.status_code < 400 else "❌"
+    print(f"{status_label} {request.method} {request.url.path} - Status: {response.status_code} ({process_time:.2f}ms)")
+    
+    return response
+
+# ── GLOBAL EXCEPTION HANDLER (The "PANIC" Catcher) ──────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"🔥 UNHANDLED ERROR at {request.url.path}:")
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error_type": str(type(exc).__name__), "path": request.url.path}
+    )
 
 # Create all tables on startup using the shared Base
 @app.on_event("startup")

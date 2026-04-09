@@ -25,8 +25,11 @@ const LoginPage = () => {
   useEffect(() => {
     const token = searchParams.get('token');
     if (token) {
+      console.log("🔒 [AUTH FLOW] Token found in URL, exchanging for session...");
       login(token);
       navigate('/dashboard');
+    } else {
+      console.log("🔓 [AUTH FLOW] No token in URL, waiting for user input.");
     }
   }, [searchParams, login, navigate]);
 
@@ -35,10 +38,11 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post('/auth/login', { email, password });
+      console.log("✅ [AUTH FLOW] Login successful. Navigating to dashboard...");
       login(res.data.access_token);
       navigate('/dashboard');
     } catch (err) {
+      console.error("❌ [AUTH FLOW] Login failed:", err);
       setError(err.response?.data?.detail || 'Login failed. Please check your credentials.');
     }
     setLoading(false);
