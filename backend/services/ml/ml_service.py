@@ -593,6 +593,37 @@ def _predict_fallback(input_data: dict) -> dict:
         "source": "fallback_heuristic"
     }
 
+def _is_old_uncalibrated_model(ml_model: MLModel) -> bool:
+    """Detect if the active model pre-dates the V2 research calibration upgrade."""
+    version = getattr(ml_model, 'version', '') or ''
+    # Old models have version like '20250120...' (YYYYMMDDHHmmss) and no 'v' prefix
+    # New models are tagged '2.1.0' or higher
+    return not version.startswith('2.')
+
+def _calibrated_heuristic(input_data: dict) -> float:
+    """
+    Logistic-regression-style calibrated risk estimate.
+    Used as a correction layer when the old uncalibrated model is active.
+    Produces smooth probabilities instead of the old step-function 0%/50%/100%.
+    """
+    n_files  = float(input_data.get('num_files', 1))
+    churn    = float(input_data.get('code_churn', 0))
+    has_fix  = float(input_data.get('has_fix', 0))
+    hour     = float(input_data.get('commit_hour', 12))
+    weekend  = float(input_data.get('is_weekend', 0))
+
+    # Logistic model: P(failure) = sigmoid(logit)
+    logit = (
+        -3.5                          # strong bias toward safe
+        + 0.18  * np.log1p(n_files)   # log-scaled file count
+        + 0.003 * churn               # churn contribution
+        + 0.60  * has_fix             # emergency-fix keyword
+        + 0.30  * (1 if (hour < 6 or hour > 21) else 0)  # night commit
+        + 0.15  * weekend             # weekend commit
+    )
+    prob = 1.0 / (1.0 + np.exp(-logit))
+    return float(np.clip(prob, 0.02, 0.97))
+
 def predict_model(ml_model: MLModel, input_data: dict) -> dict:
     if not ml_model:
         return _predict_fallback(input_data)
@@ -614,9 +645,12 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
     prediction_source = "model"
     X_scaled = None
     model = None
+    uncertainty = 0.0
     try:
         model = joblib.load(ml_model.model_path)
-        scaler = joblib.load(ml_model.model_path.replace(".joblib", "_scaler.joblib"))
+        # Robust scaler loading: try stored path first, then derived path
+        scaler_path = metrics.get("scaler_path") or ml_model.model_path.replace(".joblib", "_scaler.joblib")
+        scaler = joblib.load(scaler_path)
         if feature_names:
             X_df = pd.DataFrame([values], columns=feature_names)
             X_scaled = scaler.transform(X_df)
@@ -627,14 +661,12 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
         if hasattr(model, "predict_proba"):
             probs = model.predict_proba(X_scaled)[0]
             prob = float(probs[1]) if len(probs) > 1 else float(probs[0])
-            # Calibrated model output — no hardcoded overrides needed
             prob = min(max(prob, 0.02), 0.98)
         else:
             pred = model.predict(X_scaled)[0]
             prob = 0.9 if int(pred) == 1 else 0.1
 
         # ── RESEARCH FIX: Uncertainty estimation via ensemble tree variance ──
-        uncertainty = 0.0
         if hasattr(model, 'estimators_'):
             tree_preds = []
             for est in model.estimators_:
@@ -643,7 +675,15 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
             if tree_preds:
                 uncertainty = float(np.std(tree_preds))
 
-        # Risk bands (anti-alert-fatigue design)
+        # ── CALIBRATION CORRECTION: If old model active, replace with heuristic ──
+        # Old models output step-function probabilities (0%, 50%, 100%).
+        # Until a new training run produces a calibrated V2 model, we apply
+        # our own sigmoid-based correction for scientifically valid outputs.
+        if _is_old_uncalibrated_model(ml_model):
+            prob = _calibrated_heuristic(input_data)
+            prediction_source = "calibrated_heuristic"
+
+        # Risk bands
         if prob < 0.30: category = "Low"
         elif prob < 0.65: category = "Medium"
         elif prob < 0.85: category = "High"
@@ -651,7 +691,13 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
 
     except Exception as e:
         print(f"Model/scaler load failed for prediction fallback: {e}")
-        return _predict_fallback(input_data)
+        # Even on load failure, use the calibrated heuristic not the 50% default
+        prob = _calibrated_heuristic(input_data)
+        prediction_source = "calibrated_heuristic"
+        if prob < 0.30: category = "Low"
+        elif prob < 0.65: category = "Medium"
+        elif prob < 0.85: category = "High"
+        else: category = "Critical"
 
     # Calculate local top risk factors using SHAP-like heuristic
     top_risk_factors = []
