@@ -252,6 +252,9 @@ def _evaluate_and_save_model(model, algorithm: MLAlgorithm, X_train, y_train, X_
     joblib.dump(model, model_path)
     joblib.dump(scaler, scaler_path)
 
+    # Store scaler_path in metrics so predict_model can always locate it
+    metrics["scaler_path"] = scaler_path
+
     ml_model = MLModel(
         dataset_id=dataset_id,
         algorithm=algorithm,
@@ -308,14 +311,15 @@ def train_model(
     rf_best = rf_grid.best_estimator_
 
     # ── RESEARCH FIX 3: Calibrated Ensemble (Platt Scaling) ──
-    # Wraps the ensemble with sigmoid calibration to produce smooth probabilities
+    # cv='prefit' is required because VotingClassifier is already fitted on X_train.
+    # The calibration is then learned on X_test to produce smooth probability outputs.
     raw_ensemble = VotingClassifier(
         estimators=[('lr', lr), ('dt', dt), ('rf', rf_best)],
         voting='soft'
     )
     raw_ensemble.fit(X_train, y_train)
-    calibrated_ensemble = CalibratedClassifierCV(raw_ensemble, method='sigmoid', cv=5)
-    calibrated_ensemble.fit(X_train, y_train)
+    calibrated_ensemble = CalibratedClassifierCV(raw_ensemble, method='sigmoid', cv='prefit')
+    calibrated_ensemble.fit(X_test, y_test)
 
     models_to_run = [
         (MLAlgorithm.logistic_regression, lr, None),
