@@ -21,6 +21,44 @@ import random
 # Columns to always exclude from ML features (identifiers / strings / timestamps)
 _EXCLUDE_COLS = {"label", "pipeline_status", "commit_id", "developer_id", "commit_timestamp"}
 
+def extract_features_v2(features: dict) -> dict:
+    f = features.copy()
+    n_files = float(f.get("num_files", f.get("files_changed", 1)))
+    churn = float(f.get("code_churn", 0))
+    hour = float(f.get("commit_hour", 12))
+    f["log_files"] = np.log1p(n_files)
+    f["churn_per_file"] = churn / n_files if n_files > 0 else churn
+    f["complexity_score"] = churn * f["log_files"]
+    f["is_night"] = 1 if (hour < 6 or hour > 21) else 0
+    return f
+
+def generate_suggestions(features: dict, risk: float) -> List[Dict[str, str]]:
+    suggestions = []
+    churn = float(features.get("code_churn", 0))
+    n_files = float(features.get("num_files", 1))
+    if risk > 0.7:
+        suggestions.append({"icon": "🛑", "title": "Critical Risk", "detail": "High-impact changes detected. Recommend senior peer review."})
+    if churn > 400:
+        suggestions.append({"icon": "✂️", "title": "Large Diff", "detail": "Break this commit into smaller, atomic chunks."})
+    if n_files > 8:
+        suggestions.append({"icon": "📁", "title": "Scope Creep", "detail": "Many files changed. Ensure this commit isn't mixing unrelated features."})
+    if not suggestions:
+        suggestions.append({"icon": "🟢", "title": "Safe Harbor", "detail": "Commit looks clean and maintainable. Carry on!"})
+    return suggestions
+
+def _predict_fallback(features: dict) -> dict:
+    risk = 0.5 if float(features.get("num_files", 0)) > 10 else 0.15
+    return {
+        "risk": risk,
+        "risk_category": "Medium" if risk >= 0.5 else "Low",
+        "confidence": 0.5,
+        "uncertainty": 0.5,
+        "reason": "AI Heuristic: Fallback logic used due to model load failure",
+        "features": features,
+        "shap_values": [],
+        "suggestions": generate_suggestions(features, risk),
+        "source": "fallback_heuristic"
+    }
 
 def engineer_features_v2(df: pd.DataFrame) -> pd.DataFrame:
     """
