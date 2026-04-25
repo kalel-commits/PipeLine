@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from db import SessionLocal
 from models.ml.ml_model import MLModel
 from models.vcs_prediction import VCSPrediction
-from services.ml.ml_service import predict_model, generate_synthetic_features, extract_features, generate_suggestions
+from services.ml.ml_service import predict_model
 from services.audit_log_service import log_action
 
 router = APIRouter()
