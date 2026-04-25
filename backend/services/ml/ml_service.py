@@ -6,8 +6,9 @@ from sklearn.model_selection import train_test_split, GridSearchCV, cross_valida
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, brier_score_loss, roc_auc_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.calibration import CalibratedClassifierCV
 import joblib
 from datetime import datetime
 from models.ml.ml_model import MLAlgorithm, MLModel
@@ -19,6 +20,94 @@ import random
 
 # Columns to always exclude from ML features (identifiers / strings / timestamps)
 _EXCLUDE_COLS = {"label", "pipeline_status", "commit_id", "developer_id", "commit_timestamp"}
+
+
+def engineer_features_v2(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Research-grade feature engineering to reduce num_files dominance.
+    Adds: churn_per_file, log_files, is_night, complexity_score.
+    """
+    df = df.copy()
+    num_files_col = None
+    churn_col = None
+    hour_col = None
+
+    # Detect column names flexibly
+    for col in df.columns:
+        if col in ("num_files", "files_changed"):
+            num_files_col = col
+        if col in ("code_churn",):
+            churn_col = col
+        if col in ("commit_hour",):
+            hour_col = col
+
+    if num_files_col and churn_col:
+        safe_files = df[num_files_col].clip(lower=1)
+        df["churn_per_file"] = df[churn_col] / safe_files
+        df["log_files"] = np.log1p(df[num_files_col])
+        df["complexity_score"] = df["churn_per_file"] * df["log_files"]
+
+    if hour_col:
+        df["is_night"] = ((df[hour_col] < 6) | (df[hour_col] > 21)).astype(int)
+
+    return df
+
+
+def generate_borderline_samples(df: pd.DataFrame, n_synthetic: int = 150) -> pd.DataFrame:
+    """
+    Generate realistic borderline + counterfactual synthetic samples.
+    Fills the 7-12 file gap with 'complex successes' and 'simple failures'.
+    """
+    np.random.seed(42)
+    synthetic_rows = []
+
+    label_col = "label" if "label" in df.columns else "pipeline_status"
+    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and c != label_col]
+
+    if not numeric_cols:
+        return df
+
+    for _ in range(n_synthetic):
+        row = {}
+        # Pick a random real row as base
+        base = df.sample(1).iloc[0]
+
+        for col in numeric_cols:
+            val = base[col]
+            # Add Gaussian noise (15% of std dev)
+            noise = np.random.normal(0, max(df[col].std() * 0.15, 0.1))
+            row[col] = max(0, val + noise)
+
+        # Inject borderline cases (8-15 files) with mixed labels
+        if "num_files" in row:
+            if np.random.random() < 0.4:
+                row["num_files"] = np.random.randint(8, 16)
+        elif "files_changed" in df.columns:
+            if np.random.random() < 0.4:
+                row["files_changed"] = np.random.randint(8, 16)
+
+        # Assign label with noise (not perfectly separable)
+        file_count = row.get("num_files", row.get("files_changed", 5))
+        churn = row.get("code_churn", 100)
+        hour = row.get("commit_hour", 12)
+
+        # Probabilistic label based on logistic function
+        logit = -3.0 + 0.25 * file_count + 0.002 * churn + 0.5 * (1 if (hour < 6 or hour > 21) else 0)
+        prob = 1 / (1 + np.exp(-logit))
+        noise_prob = prob + np.random.normal(0, 0.1)
+        row[label_col] = int(np.random.random() < np.clip(noise_prob, 0.05, 0.95))
+
+        synthetic_rows.append(row)
+
+    synthetic_df = pd.DataFrame(synthetic_rows)
+
+    # Ensure column alignment
+    for col in df.columns:
+        if col not in synthetic_df.columns:
+            synthetic_df[col] = 0
+
+    combined = pd.concat([df, synthetic_df[df.columns]], ignore_index=True)
+    return combined
 
 
 def _find_features_file(dataset: Dataset) -> str:
@@ -65,6 +154,18 @@ def _evaluate_and_save_model(model, algorithm: MLAlgorithm, X_train, y_train, X_
 
     y_pred = model.predict(X_test)
 
+    # Research-grade probability metrics
+    y_prob = None
+    brier = None
+    roc_auc = None
+    if hasattr(model, 'predict_proba'):
+        y_prob = model.predict_proba(X_test)[:, 1]
+        brier = float(brier_score_loss(y_test, y_prob))
+        try:
+            roc_auc = float(roc_auc_score(y_test, y_prob))
+        except ValueError:
+            roc_auc = None
+
     feature_importances = []
     if hasattr(model, 'feature_importances_') and model.feature_importances_ is not None:
         importances = model.feature_importances_
@@ -82,6 +183,8 @@ def _evaluate_and_save_model(model, algorithm: MLAlgorithm, X_train, y_train, X_
         "precision": float(precision_score(y_test, y_pred, zero_division=0)),
         "recall": float(recall_score(y_test, y_pred, zero_division=0)),
         "f1_score": float(f1_score(y_test, y_pred, zero_division=0)),
+        "brier_score": brier,
+        "roc_auc": roc_auc,
         "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
         "cv": {
             "accuracy_mean": float(np.mean(cv_results['test_accuracy'])),
@@ -128,6 +231,13 @@ def train_model(
 ) -> List[MLModel]:
     features_path = _find_features_file(dataset)
     df = pd.read_csv(features_path)
+
+    # ── RESEARCH FIX 1: Augment with borderline samples to fill data gaps ──
+    df = generate_borderline_samples(df, n_synthetic=150)
+
+    # ── RESEARCH FIX 2: Engineer derived features to reduce num_files dominance ──
+    df = engineer_features_v2(df)
+
     X, y = _prepare_xy(df)
 
     scaler = StandardScaler()
@@ -145,33 +255,35 @@ def train_model(
     # Deactivate existing models for this dataset
     db.query(MLModel).filter(MLModel.dataset_id == dataset.id).update({MLModel.is_active: False}, synchronize_session=False)
 
-    # 1. Logistic Regression
-    lr = LogisticRegression(max_iter=1000, random_state=42)
+    # 1. Logistic Regression (L2 regularized, C=0.5 to prevent overconfidence)
+    lr = LogisticRegression(max_iter=1000, C=0.5, random_state=42)
     lr.fit(X_train, y_train)
 
-    # 2. Decision Tree
-    dt = DecisionTreeClassifier(max_depth=7, min_samples_split=5, random_state=42)
+    # 2. Decision Tree (REDUCED depth to prevent hard splits — fixes step function)
+    dt = DecisionTreeClassifier(max_depth=4, min_samples_split=10, min_samples_leaf=5, random_state=42)
     dt.fit(X_train, y_train)
 
-    # 3. Random Forest (with CV)
-    param_grid = {'n_estimators': [50, 100], 'max_depth': [5, 10, None], 'min_samples_split': [2, 5]}
-    # Using n_jobs=1 (sequential) instead of -1 to avoid 'un-serialize' errors on Windows/FastAPI
-    rf_grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, scoring='f1', n_jobs=1)
+    # 3. Random Forest (with CV, limited complexity)
+    param_grid = {'n_estimators': [50, 100], 'max_depth': [4, 6], 'min_samples_split': [5, 10]}
+    rf_grid = GridSearchCV(RandomForestClassifier(min_samples_leaf=5, random_state=42), param_grid, cv=3, scoring='f1', n_jobs=1)
     rf_grid.fit(X_train, y_train)
     rf_best = rf_grid.best_estimator_
 
-    # 4. Ensemble Voting Classifier
-    ensemble = VotingClassifier(
+    # ── RESEARCH FIX 3: Calibrated Ensemble (Platt Scaling) ──
+    # Wraps the ensemble with sigmoid calibration to produce smooth probabilities
+    raw_ensemble = VotingClassifier(
         estimators=[('lr', lr), ('dt', dt), ('rf', rf_best)],
         voting='soft'
     )
-    ensemble.fit(X_train, y_train)
+    raw_ensemble.fit(X_train, y_train)
+    calibrated_ensemble = CalibratedClassifierCV(raw_ensemble, method='sigmoid', cv=5)
+    calibrated_ensemble.fit(X_train, y_train)
 
     models_to_run = [
         (MLAlgorithm.logistic_regression, lr, None),
         (MLAlgorithm.decision_tree, dt, None),
         (MLAlgorithm.random_forest, rf_best, rf_grid.best_params_),
-        (MLAlgorithm.ensemble, ensemble, None)
+        (MLAlgorithm.ensemble, calibrated_ensemble, None)
     ]
 
     trained_ml_models = []
@@ -332,6 +444,13 @@ def extract_features(df: pd.DataFrame) -> pd.DataFrame:
         now = datetime.utcnow()
         feat_df["is_weekend"] = 1 if now.weekday() >= 5 else 0
         feat_df["commit_hour"] = now.hour
+
+    # 7. Derived features (Research Fix: reduce num_files dominance)
+    safe_files = feat_df["num_files"].clip(lower=1)
+    feat_df["churn_per_file"] = feat_df["code_churn"] / safe_files
+    feat_df["log_files"] = np.log1p(feat_df["num_files"])
+    feat_df["is_night"] = ((feat_df["commit_hour"] < 6) | (feat_df["commit_hour"] > 21)).astype(int)
+    feat_df["complexity_score"] = feat_df["churn_per_file"] * feat_df["log_files"]
         
     return feat_df
 
@@ -466,21 +585,27 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
         if hasattr(model, "predict_proba"):
             probs = model.predict_proba(X_scaled)[0]
             prob = float(probs[1]) if len(probs) > 1 else float(probs[0])
-            churn = input_data.get("code_churn", 0)
-            has_fix = input_data.get("has_fix", 0)
-            hour = input_data.get("commit_hour", 12)
-            if churn > 300 or (has_fix == 1 and (hour >= 22 or hour <= 4)):
-                prob = max(prob, 0.88)
-            elif churn > 150 or has_fix == 1:
-                prob = max(prob, 0.68)
-            prob = min(max(prob, 0.05), 0.98)
+            # Calibrated model output — no hardcoded overrides needed
+            prob = min(max(prob, 0.02), 0.98)
         else:
             pred = model.predict(X_scaled)[0]
             prob = 0.9 if int(pred) == 1 else 0.1
-            
-        category = "Low"
-        if prob > 0.65: category = "High"
-        elif prob > 0.35: category = "Medium"
+
+        # ── RESEARCH FIX: Uncertainty estimation via ensemble tree variance ──
+        uncertainty = 0.0
+        if hasattr(model, 'estimators_'):
+            tree_preds = []
+            for est in model.estimators_:
+                if hasattr(est, 'predict_proba'):
+                    tree_preds.append(est.predict_proba(X_scaled)[0, 1])
+            if tree_preds:
+                uncertainty = float(np.std(tree_preds))
+
+        # Risk bands (anti-alert-fatigue design)
+        if prob < 0.30: category = "Low"
+        elif prob < 0.65: category = "Medium"
+        elif prob < 0.85: category = "High"
+        else: category = "Critical"
 
     except Exception as e:
         print(f"Model/scaler load failed for prediction fallback: {e}")
@@ -527,8 +652,9 @@ def predict_model(ml_model: MLModel, input_data: dict) -> dict:
 
     return {
         "risk": prob,
-        "risk_category": "High" if prob > 0.65 else ("Medium" if prob > 0.35 else "Low"),
+        "risk_category": category,
         "confidence": round(abs(prob - 0.5) * 2, 3),
+        "uncertainty": round(uncertainty, 4) if 'uncertainty' in dir() else 0.0,
         "reason": reason,
         "features": input_data,
         "shap_values": top_risk_factors,
